@@ -1,8 +1,18 @@
-export function requireRole(...allowed) {
+export function requireRole(role) {
   return (req, res, next) => {
-    const roles = req.user?.roles || [];
-    const ok = roles.some((r) => allowed.includes(r));
-    if (!ok) return res.status(403).json({ error: "forbidden" });
-    next();
+    
+    if (!req.user) {
+      return res.status(401).json({ error: "Não autenticado" });
+    }
+
+    const roles = req.user.roles || [];
+
+    const hasRole = Array.isArray(roles) && roles.includes(role);
+
+    if (!hasRole) {
+      return res.status(403).json({ error: "Precisa estar logado como admin" });
+    }
+
+    return next();
   };
 }

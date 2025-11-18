@@ -1,26 +1,34 @@
-import admin from "firebase-admin";
 
-export async function requireAuth(req, res, next) {
+
+// IMPORTA o admin de src/db/firestore.js
+import admin from "../db/firestore.js";
+
+//autorizaçao
+export async function auth(req, res, next) {
+  const authHeader = req.headers.authorization || "";
+
+  if (!authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Token não informado" });
+  }
+
+  const token = authHeader.split(" ")[1];
+
   try {
-    const auth = req.headers.authorization || "";
-    const [, token] = auth.split(" ");
-    if (!token) return res.status(401).json({ error: "missing_token" });
-
+    // Valida o ID token do Firebase
     const decoded = await admin.auth().verifyIdToken(token);
+
+    // Anexa os dados do usuário 
     req.user = {
       uid: decoded.uid,
-      email: decoded.email,
-      roles: Array.isArray(decoded.roles)
-        ? decoded.roles
-        : [
-            decoded.admin && "admin",
-            decoded.editor && "editor",
-            decoded.cozinha && "cozinha",
-            decoded.estoque && "estoque",
-          ].filter(Boolean),
+      email: decoded.email || null,
+      roles: Array.isArray(decoded.roles) ? decoded.roles : [],
+      canEditStore: decoded.canEditStore === true,
+      canEditEvents: decoded.canEditEvents === true,
     };
-    next();
-  } catch {
-    res.status(401).json({ error: "invalid_token" });
+
+    return next();
+  } catch (err) {
+    console.error("[auth middleware] Erro ao verificar token:", err);
+    return res.status(401).json({ error: "Token inválido" });
   }
 }
