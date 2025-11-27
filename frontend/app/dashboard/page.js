@@ -5,6 +5,7 @@ import { auth } from "../../lib/firebase";
 import { useRouter } from "next/navigation";
 import Nav from "../../components/Nav";
 import Link from "next/link";
+import SideMenu from "../../components/SideMenu";
 
 export default function DashboardPage() {
   const [ready, setReady] = useState(false);
@@ -19,7 +20,6 @@ export default function DashboardPage() {
   const [statsError, setStatsError] = useState("");
   const router = useRouter();
 
-  //Autenticação
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) {
@@ -65,7 +65,7 @@ export default function DashboardPage() {
 
       try {
         const user = auth.currentUser;
-        const token = await user.getIdToken(); // obrigatório para rotas protegidas
+        const token = await user.getIdToken();
 
         const [resProd, resEvents, resUsers, resOrders] = await Promise.all([
           fetch("/api/products", { cache: "no-store" }),
@@ -85,14 +85,12 @@ export default function DashboardPage() {
         const prodData = await resProd.json();
         const eventsData = await resEvents.json();
 
-        // Usuários
         let usersCount = 0;
         if (resUsers.ok) {
           const usersData = await resUsers.json();
           if (Array.isArray(usersData)) usersCount = usersData.length;
         }
 
-        // Vendas do mês
         let soldThisMonth = 0;
         if (resOrders.ok) {
           const summary = await resOrders.json();
@@ -124,7 +122,6 @@ export default function DashboardPage() {
   const canStore = claims?.canEditStore === true;
   const canEvents = claims?.canEditEvents === true;
 
-  //Estilos
   const page = {
     minHeight: "calc(100svh - 56px)",
     padding: 16,
@@ -222,40 +219,7 @@ export default function DashboardPage() {
     <>
       <Nav />
       <main style={page}>
-        <aside style={asidePanel}>
-          <strong style={{ color: "#0f172a" }}>Menu</strong>
-          <ul style={{ ...asideList, overflow: "auto" }}>
-            <li>
-              <Link href="/products" style={linkStyle}>
-                Lojinha
-              </Link>
-            </li>
-
-            <li style={inactiveItem}>Pedidos</li>
-
-            <li>
-              <Link href="/events" style={linkStyle}>
-                Eventos
-              </Link>
-            </li>
-
-            {/* Relatórios e Permissões */}
-            {isAdmin && (
-              <>
-                <li>
-                  <Link href="/relatorios" style={linkStyle}>
-                    Relatórios
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/controle" style={linkStyle}>
-                    Permissões
-                  </Link>
-                </li>
-              </>
-            )}
-          </ul>
-        </aside>
+        <SideMenu claims={claims} />
 
         <section style={mainPanel}>
           <div style={bgImageOverlay} />
@@ -269,7 +233,6 @@ export default function DashboardPage() {
             {statsError && <div style={errorBox}>{statsError}</div>}
 
             <div style={cardsGrid}>
-              {/* Produtos */}
               <div style={card}>
                 <div style={cardTitle}>Produtos cadastrados</div>
                 <div style={cardValue}>
@@ -278,7 +241,6 @@ export default function DashboardPage() {
                 <div style={cardSub}>Itens disponíveis.</div>
               </div>
 
-              {/* Eventos */}
               <div style={card}>
                 <div style={cardTitle}>Eventos futuros</div>
                 <div style={cardValue}>
@@ -287,7 +249,6 @@ export default function DashboardPage() {
                 <div style={cardSub}>Ações da APAE.</div>
               </div>
 
-              {/* Usuários */}
               <div style={card}>
                 <div style={cardTitle}>Usuários cadastrados</div>
                 <div style={cardValue}>
@@ -296,7 +257,6 @@ export default function DashboardPage() {
                 <div style={cardSub}>Contas registradas.</div>
               </div>
 
-              {/* Produtos vendidos */}
               <div style={card}>
                 <div style={cardTitle}>Produtos vendidos no mês</div>
                 <div style={cardValue}>
@@ -305,7 +265,6 @@ export default function DashboardPage() {
                 <div style={cardSub}>Total de itens vendidos.</div>
               </div>
 
-              {/* Acesso rápido */}
               <div style={card}>
                 <div style={cardTitle}>Acesso rápido</div>
                 <div style={cardSub}>Atalhos conforme permissões.</div>

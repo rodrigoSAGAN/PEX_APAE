@@ -134,7 +134,6 @@ router.get("/summary", requireDashboardAccess, async (req, res) => {
   }
 });
 
-//Lista pedidos do período 
 router.get("/", requireDashboardAccess, async (req, res) => {
   try {
     const period = (req.query.period || "month").toString();
@@ -175,9 +174,27 @@ router.get("/", requireDashboardAccess, async (req, res) => {
   }
 });
 
-router.post("/", requireAuth, async (req, res) => {
+async function optionalAuth(req, res, next) {
   try {
-    const { items, totalValue } = req.body || {};
+    const authHeader = req.headers.authorization || "";
+    const [, token] = authHeader.split(" ");
+
+    if (token) {
+      const decoded = await admin.auth().verifyIdToken(token);
+      req.user = {
+        uid: decoded.uid,
+        email: decoded.email,
+      };
+    }
+  } catch (e) {
+    console.warn("[orders] optionalAuth: token inválido ou expirado", e.message);
+  }
+  next();
+}
+
+router.post("/", optionalAuth, async (req, res) => {
+  try {
+    const { items, totalValue, pickupName, phoneWhatsApp } = req.body || {};
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: "items_required" });
@@ -187,11 +204,20 @@ router.post("/", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "invalid_totalValue" });
     }
 
+    if (!req.user && (!pickupName || !pickupName.trim())) {
+      return res.status(400).json({ 
+        error: "pickup_name_required", 
+        message: "Para comprar sem login, informe o Nome de Retirada." 
+      });
+    }
+
     const payload = {
       items,
       totalValue,
       userId: req.user?.uid || null,
       userEmail: req.user?.email || null,
+      pickupName: pickupName ? pickupName.trim() : null,
+      phoneWhatsApp: phoneWhatsApp ? phoneWhatsApp.trim() : null,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
@@ -203,6 +229,46 @@ router.post("/", requireAuth, async (req, res) => {
     });
   } catch (e) {
     console.error("[orders] POST / error:", e);
+    return res.status(500).json({
+      error: "internal_error",
+      message: e.message,
+    });
+  }
+});
+
+router.put("/:id/delivery", requireDashboardAccess, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { itemIndex, delivered } = req.body;
+
+    if (typeof itemIndex !== "number" || typeof delivered !== "boolean") {
+      return res.status(400).json({ error: "invalid_payload" });
+    }
+
+    const orderRef = db.collection("orders").doc(id);
+    const docSnap = await orderRef.get();
+
+    if (!docSnap.exists) {
+      return res.status(404).json({ error: "order_not_found" });
+    }
+
+    const data = docSnap.data();
+    const items = Array.isArray(data.items) ? data.items : [];
+
+    if (!items[itemIndex]) {
+      return res.status(404).json({ error: "item_not_found" });
+    }
+
+    items[itemIndex] = {
+      ...items[itemIndex],
+      delivered: delivered,
+    };
+
+    await orderRef.update({ items });
+
+    return res.json({ success: true, items });
+  } catch (e) {
+    console.error("[orders] PUT /:id/delivery error:", e);
     return res.status(500).json({
       error: "internal_error",
       message: e.message,

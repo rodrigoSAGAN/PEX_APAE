@@ -5,8 +5,11 @@ import { onAuthStateChanged } from "firebase/auth";
 import Nav from "../../components/Nav";
 import { auth } from "../../lib/firebase";
 import Link from "next/link";
+import SideMenu from "../../components/SideMenu";
+import { useModal } from "../../components/ModalContext";
 
 export default function ControlePage() {
+  const { showModal, showConfirm } = useModal();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -64,11 +67,11 @@ export default function ControlePage() {
     const next = !user.canEditStore;
 
     if (
-      !confirm(
+      !(await showConfirm(
         next
           ? `Conceder permissão para editar a LOJA a ${user.email}?`
           : `Revogar permissão de edição da LOJA de ${user.email}?`
-      )
+      ))
     ) {
       return;
     }
@@ -93,7 +96,7 @@ export default function ControlePage() {
       console.log("[controle] Resposta /permissions LOJA:", res.status);
 
       if (!res.ok) {
-        alert("Não foi possível atualizar permissão de LOJA.");
+        showModal("Não foi possível atualizar permissão de LOJA.", "Erro");
         return;
       }
 
@@ -115,7 +118,7 @@ export default function ControlePage() {
       );
     } catch (e) {
       console.error("[controle] Erro toggleStorePermission:", e);
-      alert("Erro ao atualizar permissão.");
+      showModal("Erro ao atualizar permissão.", "Erro");
     } finally {
       setBusyUid(null);
     }
@@ -126,11 +129,11 @@ export default function ControlePage() {
     const next = !user.canEditEvents;
 
     if (
-      !confirm(
+      !(await showConfirm(
         next
           ? `Conceder permissão para editar EVENTOS a ${user.email}?`
           : `Revogar permissão de edição de EVENTOS de ${user.email}?`
-      )
+      ))
     ) {
       return;
     }
@@ -155,7 +158,7 @@ export default function ControlePage() {
       console.log("[controle] Resposta /permissions EVENTOS:", res.status);
 
       if (!res.ok) {
-        alert("Não foi possível atualizar permissão de EVENTOS.");
+        showModal("Não foi possível atualizar permissão de EVENTOS.", "Erro");
         return;
       }
 
@@ -177,7 +180,7 @@ export default function ControlePage() {
       );
     } catch (e) {
       console.error("[controle] Erro toggleEventsPermission:", e);
-      alert("Erro ao atualizar permissão.");
+      showModal("Erro ao atualizar permissão.", "Erro");
     } finally {
       setBusyUid(null);
     }
@@ -235,8 +238,6 @@ export default function ControlePage() {
   const isColab = roles.includes("colaborador");
   const canStore = claims?.canEditStore === true;
   const canEvents = claims?.canEditEvents === true;
-
-  //  Estilos 
 
   const page = {
     minHeight: "calc(100svh - 56px)",
@@ -399,40 +400,8 @@ export default function ControlePage() {
       <Nav />
       <main style={page}>
         {}
-        <aside style={asidePanel}>
-          <strong style={{ color: "#0f172a" }}>Menu</strong>
-          <ul style={{ ...asideList, overflow: "auto" }}>
-            <li>
-              <Link href="/products" style={linkStyle}>
-                Lojinha
-              </Link>
-            </li>
-            <li style={inactiveItem}>Pedidos</li>
-            <li>
-              <Link href="/events" style={linkStyle}>
-                Eventos
-              </Link>
-            </li>
+        <SideMenu claims={claims} />
 
-            {}
-            {isAdmin && (
-              <>
-                <li>
-                  <Link href="/relatorios" style={linkStyle}>
-                    Relatórios
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/controle" style={linkStyle}>
-                    Permissões
-                  </Link>
-                </li>
-              </>
-            )}
-          </ul>
-        </aside>
-
-        {/* Conteúdo principal */}
         <section style={mainPanel}>
           <div style={wrap}>
             <h1 style={title}>Controle de acesso</h1>
@@ -485,7 +454,6 @@ export default function ControlePage() {
                               )}
                             </td>
 
-                            {/* LOJA */}
                             <td style={td}>
                               {u.canEditStore ? (
                                 <span style={pill}>Sim</span>
@@ -494,7 +462,6 @@ export default function ControlePage() {
                               )}
                             </td>
 
-                            {/* EVENTOS */}
                             <td style={td}>
                               {u.canEditEvents ? (
                                 <span style={pill}>Sim</span>
@@ -503,7 +470,6 @@ export default function ControlePage() {
                               )}
                             </td>
 
-                            {/* AÇÕES */}
                             <td style={td}>
                               {isAdminUser ? (
                                 <span

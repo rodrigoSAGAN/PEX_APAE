@@ -1,0 +1,154 @@
+"use client";
+
+import { createContext, useContext, useState, useCallback } from "react";
+
+const ModalContext = createContext();
+
+export function ModalProvider({ children }) {
+  const [modal, setModal] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "alert",
+    onConfirm: null,
+    onCancel: null,
+  });
+
+  const showModal = useCallback((message, title = "Aviso") => {
+    return new Promise((resolve) => {
+      setModal({
+        isOpen: true,
+        title,
+        message,
+        type: "alert",
+        onConfirm: () => {
+          closeModal();
+          resolve(true);
+        },
+        onCancel: () => {
+          closeModal();
+          resolve(false);
+        },
+      });
+    });
+  }, []);
+
+  const showConfirm = useCallback((message, title = "Confirmação") => {
+    return new Promise((resolve) => {
+      setModal({
+        isOpen: true,
+        title,
+        message,
+        type: "confirm",
+        onConfirm: () => {
+          closeModal();
+          resolve(true);
+        },
+        onCancel: () => {
+          closeModal();
+          resolve(false);
+        },
+      });
+    });
+  }, []);
+
+  const closeModal = useCallback(() => {
+    setModal((prev) => ({ ...prev, isOpen: false }));
+  }, []);
+
+  return (
+    <ModalContext.Provider value={{ showModal, showConfirm }}>
+      {children}
+      {modal.isOpen && (
+        <div style={overlayStyle}>
+          <div style={modalStyle}>
+            <h3 style={titleStyle}>{modal.title}</h3>
+            <p style={messageStyle}>{modal.message}</p>
+            <div style={actionsStyle}>
+              {modal.type === "confirm" && (
+                <button onClick={modal.onCancel} style={cancelButtonStyle}>
+                  Cancelar
+                </button>
+              )}
+              <button onClick={modal.onConfirm} style={confirmButtonStyle}>
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </ModalContext.Provider>
+  );
+}
+
+export function useModal() {
+  return useContext(ModalContext);
+}
+
+const overlayStyle = {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: "rgba(0, 0, 0, 0.5)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: 9999,
+  backdropFilter: "blur(4px)",
+};
+
+const modalStyle = {
+  backgroundColor: "#fff",
+  padding: "24px",
+  borderRadius: "16px",
+  maxWidth: "400px",
+  width: "90%",
+  boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+  textAlign: "center",
+  animation: "fadeIn 0.2s ease-out",
+};
+
+const titleStyle = {
+  margin: "0 0 12px 0",
+  fontSize: "20px",
+  fontWeight: "700",
+  color: "#111827",
+};
+
+const messageStyle = {
+  margin: "0 0 24px 0",
+  fontSize: "16px",
+  color: "#4b5563",
+  lineHeight: "1.5",
+};
+
+const actionsStyle = {
+  display: "flex",
+  justifyContent: "center",
+  gap: "12px",
+};
+
+const buttonBaseStyle = {
+  padding: "10px 20px",
+  borderRadius: "9999px",
+  fontSize: "14px",
+  fontWeight: "600",
+  cursor: "pointer",
+  border: "none",
+  transition: "transform 0.1s",
+};
+
+const confirmButtonStyle = {
+  ...buttonBaseStyle,
+  backgroundColor: "#2563eb",
+  color: "#fff",
+  boxShadow: "0 4px 6px -1px rgba(37, 99, 235, 0.2)",
+};
+
+const cancelButtonStyle = {
+  ...buttonBaseStyle,
+  backgroundColor: "#f3f4f6",
+  color: "#374151",
+};

@@ -6,6 +6,7 @@ import { auth } from "../../lib/firebase";
 import { useRouter } from "next/navigation";
 import Nav from "../../components/Nav";
 import Link from "next/link";
+import SideMenu from "../../components/SideMenu";
 
 export default function RelatoriosPage() {
   const router = useRouter();
@@ -23,10 +24,9 @@ export default function RelatoriosPage() {
   });
 
   const [orders, setOrders] = useState([]);
-  const [logs, setLogs] = useState([]); // logs 
-  const [showLogs, setShowLogs] = useState(false); //exibição dos logs
+  const [logs, setLogs] = useState([]);
+  const [showLogs, setShowLogs] = useState(false);
 
-  //Autenticação + permissão
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) {
@@ -42,7 +42,6 @@ export default function RelatoriosPage() {
         const roles = Array.isArray(c.roles) ? c.roles : [];
         const isAdmin = roles.includes("admin");
 
-        // Relatórios: apenas admin
         if (!isAdmin) {
           router.replace("/");
           return;
@@ -58,7 +57,6 @@ export default function RelatoriosPage() {
     return () => unsub();
   }, [router]);
 
-  //Carregar resumo do mes
   useEffect(() => {
     if (!ready) return;
 
@@ -88,7 +86,6 @@ export default function RelatoriosPage() {
           totalRevenue: 0,
         };
 
-      //sumary
         if (resSummary.ok) {
           const rawSum = await resSummary.json();
           summaryData = {
@@ -98,7 +95,6 @@ export default function RelatoriosPage() {
           };
         }
 
-        // Pedidos
         let ordersList = [];
         if (resOrders.ok) {
           const rawOrders = await resOrders.json();
@@ -107,7 +103,6 @@ export default function RelatoriosPage() {
           }
         }
 
-        //fallback se necessario
         if (!resSummary.ok && ordersList.length > 0) {
           let totalOrders = ordersList.length;
           let totalSold = 0;
@@ -144,7 +139,6 @@ export default function RelatoriosPage() {
           };
         }
 
-        //Logs
         let logsList = [];
         if (resLogs.ok) {
           try {
@@ -172,8 +166,6 @@ export default function RelatoriosPage() {
   }, [ready]);
 
   if (!ready) return null;
-
-  //Helpers
 
   function formatDateTime(iso) {
     if (!iso) return "-";
@@ -209,16 +201,12 @@ export default function RelatoriosPage() {
       .join(", ");
   }
 
-  // Permissões (das claims)
   const roles = Array.isArray(claims?.roles) ? claims.roles : [];
   const isAdmin = roles.includes("admin");
   const isColab = roles.includes("colaborador");
   const canStore = claims?.canEditStore === true;
   const canEvents = claims?.canEditEvents === true;
 
-  //Estilos
-
-  
   const page = {
     minHeight: "calc(100svh - 56px)",
     padding: 16,
@@ -380,41 +368,8 @@ export default function RelatoriosPage() {
     <>
       <Nav />
       <main style={page}>
-        {/* MENU LATERAL*/}
-        <aside style={asidePanel}>
-          <strong style={{ color: "#0f172a" }}>Menu</strong>
-          <ul style={{ ...asideList, overflow: "auto" }}>
-            <li>
-              <Link href="/products" style={linkStyle}>
-                Lojinha
-              </Link>
-            </li>
-            <li style={inactiveItem}>Pedidos</li>
-            <li>
-              <Link href="/events" style={linkStyle}>
-                Eventos
-              </Link>
-            </li>
+        <SideMenu claims={claims} />
 
-            {/* Relatórios e Permissões*/}
-            {isAdmin && (
-              <>
-                <li>
-                  <Link href="/relatorios" style={linkStyle}>
-                    Relatórios
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/controle" style={linkStyle}>
-                    Permissões
-                  </Link>
-                </li>
-              </>
-            )}
-          </ul>
-        </aside>
-
-        {/* CONTEÚDO PRINCIPAL */}
         <section style={mainPanel}>
           <div>
             <h1 style={title}>Relatórios de vendas</h1>
@@ -424,7 +379,6 @@ export default function RelatoriosPage() {
 
             {error && <div style={errorBox}>{error}</div>}
 
-            {/* Cards de resumo */}
             <section style={cardsGrid}>
               <div style={card}>
                 <div style={cardTitle}>Pedidos no mês</div>
@@ -457,7 +411,6 @@ export default function RelatoriosPage() {
               </div>
             </section>
 
-            {/* Tabela de logs de pedidos */}
             <section>
               <h2 style={{ ...cardTitle, fontSize: 16, marginBottom: 8 }}>
                 Registro de vendas (mês atual)
@@ -509,7 +462,6 @@ export default function RelatoriosPage() {
               </div>
             </section>
 
-            {/* Logs com botão de toggle */}
             <section style={{ marginTop: 24 }}>
               <h2 style={{ ...cardTitle, fontSize: 16, marginBottom: 4 }}>
                 Logs de alterações (auditoria)
@@ -547,12 +499,24 @@ export default function RelatoriosPage() {
                         {logs.map((log) => {
                           const createdAt = log.createdAt || log.timestamp;
                           const userEmail =
+                            log.userName ||
                             log.userEmail ||
                             log.email ||
                             log.user?.email ||
                             "—";
-                          const type = log.type || log.entityType || "—";
-                          const action = log.action || log.operation || "—";
+                          const typeMap = {
+                            order: "Pedido",
+                            general: "Geral",
+                          };
+                          const actionMap = {
+                            toggle_delivery: "Alteração de Entrega",
+                          };
+
+                          const typeCode = log.type || log.entityType || "—";
+                          const actionCode = log.action || log.operation || "—";
+
+                          const type = typeMap[typeCode] || typeCode;
+                          const action = actionMap[actionCode] || actionCode;
                           const details =
                             log.details ||
                             log.entityName ||

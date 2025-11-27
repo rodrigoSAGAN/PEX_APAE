@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Nav from "../../components/Nav";
+import SideMenu from "../../components/SideMenu";
 import { getIdTokenOrNull } from "../../lib/authToken";
+import { useModal } from "../../components/ModalContext";
 
 export default function EventsPage() {
+  const { showModal, showConfirm } = useModal();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
-  // criação / edição
   const [form, setForm] = useState({
     title: "",
     date: "",
@@ -18,12 +20,11 @@ export default function EventsPage() {
   });
   const [editing, setEditing] = useState(null);
 
-  // permissão para editar eventos 
   const [canEditEvents, setCanEditEvents] = useState(false);
+  const [claims, setClaims] = useState(null);
 
   const API = "/api/events";
 
-  //Carregar eventos
   async function load() {
     setErr("");
     setLoading(true);
@@ -40,12 +41,12 @@ export default function EventsPage() {
     }
   }
 
-  // Verifica permissões
   async function checkPermissions() {
     try {
       const token = await getIdTokenOrNull();
       if (!token) {
         setCanEditEvents(false);
+        setClaims(null);
         return;
       }
 
@@ -54,6 +55,7 @@ export default function EventsPage() {
         payloadBase64.replace(/-/g, "+").replace(/_/g, "/")
       );
       const payload = JSON.parse(payloadJson);
+      setClaims(payload);
 
       const roles = Array.isArray(payload.roles) ? payload.roles : [];
       const isAdmin = roles.includes("admin");
@@ -74,15 +76,15 @@ export default function EventsPage() {
     
   }, []);
 
-  // Salvar/criar/editar evento
   async function handleSave(e) {
     e.preventDefault();
 
     try {
       const token = await getIdTokenOrNull();
       if (!token) {
-        return alert(
-          "Faça login como ADMIN ou colaborador autorizado (eventos) para executar esta ação."
+        return showModal(
+          "Faça login como ADMIN ou colaborador autorizado (eventos) para executar esta ação.",
+          "Acesso Negado"
         );
       }
 
@@ -112,7 +114,7 @@ export default function EventsPage() {
             : res.status === 403
             ? "Permissão negada. Apenas ADMIN ou colaborador autorizado (eventos) pode editar."
             : "Falha ao salvar evento.";
-        return alert(msg);
+        return showModal(msg, "Erro");
       }
 
       setForm({ title: "", date: "", location: "", description: "" });
@@ -120,18 +122,18 @@ export default function EventsPage() {
       await load();
     } catch (e) {
       console.error("[events] erro ao salvar evento:", e);
-      alert("Erro inesperado ao salvar evento.");
+      showModal("Erro inesperado ao salvar evento.", "Erro");
     }
   }
 
-  //Excluir evento
   async function handleDelete(id) {
-    if (!confirm("Excluir este evento?")) return;
+    if (!(await showConfirm("Excluir este evento?"))) return;
     try {
       const token = await getIdTokenOrNull();
       if (!token) {
-        return alert(
-          "Faça login como ADMIN ou colaborador autorizado (eventos) para executar esta ação."
+        return showModal(
+          "Faça login como ADMIN ou colaborador autorizado (eventos) para executar esta ação.",
+          "Acesso Negado"
         );
       }
 
@@ -149,26 +151,39 @@ export default function EventsPage() {
             : res.status === 404
             ? "Evento não encontrado."
             : "Falha ao excluir evento.";
-        return alert(msg);
+        return showModal(msg, "Erro");
       }
 
       await load();
     } catch (e) {
       console.error("[events] erro ao excluir evento:", e);
-      alert("Erro inesperado ao excluir evento.");
+      showModal("Erro inesperado ao excluir evento.", "Erro");
     }
   }
 
-  //Estilos
-
-  const wrap = {
+  const wrapGrid = {
     padding: 16,
-    maxWidth: 1080,
-    margin: "24px auto",
+    maxWidth: 1200,
+    margin: "0 auto",
+    display: "grid",
+    gridTemplateColumns: "260px 1fr",
+    gap: 16,
+  };
+
+  const wrapFull = {
+    padding: 16,
+    maxWidth: 1200,
+    margin: "0 auto",
+    display: "block",
+  };
+
+  const mainContent = {
     background:
       "linear-gradient(135deg, rgba(219,234,254,0.85), rgba(239,246,255,0.9))",
     borderRadius: 24,
     boxShadow: "0 12px 30px rgba(15,23,42,0.08)",
+    padding: 24,
+    minWidth: 0,
   };
 
   const h2 = {
@@ -341,7 +356,6 @@ export default function EventsPage() {
     fontWeight: 600,
   };
 
-  // img abaixo dos eventos
   const infoImageWrap = {
     margin: "24px auto 8px auto",
     maxWidth: 900,
@@ -359,186 +373,197 @@ export default function EventsPage() {
     objectFit: "cover",
   };
 
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkSize = () => setIsMobile(window.innerWidth < 768);
+    checkSize();
+    window.addEventListener("resize", checkSize);
+    return () => window.removeEventListener("resize", checkSize);
+  }, []);
+
+  const showSidebar = !isMobile && claims;
+
   return (
     <>
       <Nav />
-      <main style={wrap}>
-        <h2 style={h2}>Eventos</h2>
-        <p style={subtitle}>
-          Acompanhe as ações, campanhas e eventos da APAE-Pinhão.
-        </p>
+      <div style={showSidebar ? wrapGrid : wrapFull}>
+        {showSidebar && <SideMenu claims={claims} />}
+        
+        <main style={mainContent}>
+          <h2 style={h2}>Eventos</h2>
+          <p style={subtitle}>
+            Acompanhe as ações, campanhas e eventos da APAE-Pinhão.
+          </p>
 
-        {err && <div style={errorBox}>{err}</div>}
+          {err && <div style={errorBox}>{err}</div>}
 
-        {/* Formulário de criação/edição */}
-        {canEditEvents && (
-          <form onSubmit={handleSave} style={formWrap}>
-            <div style={formRow}>
-              <div>
-                <label style={label} htmlFor="title">
-                  Título do evento
-                </label>
-                <input
-                  id="title"
-                  style={input}
-                  value={form.title}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, title: e.target.value }))
-                  }
-                  required
-                  placeholder="Ex.: Festa Junina Solidária"
-                />
-              </div>
-
-              <div>
-                <label style={label} htmlFor="date">
-                  Data
-                </label>
-                <input
-                  id="date"
-                  type="date"
-                  style={input}
-                  value={form.date}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, date: e.target.value }))
-                  }
-                />
-              </div>
-
-              <div>
-                <label style={label} htmlFor="location">
-                  Local
-                </label>
-                <input
-                  id="location"
-                  style={input}
-                  value={form.location}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, location: e.target.value }))
-                  }
-                  placeholder="Ex.: Ginásio Municipal"
-                />
-              </div>
-            </div>
-
-            <div style={textAreaRow}>
-              <label style={label} htmlFor="description">
-                Descrição
-              </label>
-              <textarea
-                id="description"
-                style={textArea}
-                value={form.description}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, description: e.target.value }))
-                }
-                placeholder="Detalhes sobre o evento, horário, atividades, etc."
-              />
-            </div>
-
-            <div style={formActions}>
-              {editing && (
-                <button
-                  type="button"
-                  style={btnSecondary}
-                  onClick={() => {
-                    setEditing(null);
-                    setForm({
-                      title: "",
-                      date: "",
-                      location: "",
-                      description: "",
-                    });
-                  }}
-                >
-                  Cancelar
-                </button>
-              )}
-
-              <button type="submit" style={btnPrimary}>
-                {editing ? "Salvar alterações" : "Cadastrar evento"}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Lista de eventos */}
-        <section style={listCard}>
-          {loading ? (
-            <div style={empty}>Carregando eventos...</div>
-          ) : events.length === 0 ? (
-            <div style={empty}>Nenhum evento cadastrado no momento.</div>
-          ) : (
-            events.map((ev) => (
-              <div key={ev.id} style={eventItem}>
-                <div style={eventMain}>
-                  <div style={eventTitle}>
-                    {ev.title || "Evento sem título"}
-                  </div>
-                  <div style={eventMeta}>
-                    {ev.date && (
-                      <>
-                        <strong>Data:</strong> {ev.date}
-                        {" | "}
-                      </>
-                    )}
-                    {ev.location && (
-                      <>
-                        <strong>Local:</strong> {ev.location}
-                      </>
-                    )}
-                  </div>
-                  {ev.description && (
-                    <div style={eventDesc}>{ev.description}</div>
-                  )}
+          {canEditEvents && (
+            <form onSubmit={handleSave} style={formWrap}>
+              <div style={formRow}>
+                <div>
+                  <label style={label} htmlFor="title">
+                    Título do evento
+                  </label>
+                  <input
+                    id="title"
+                    style={input}
+                    value={form.title}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, title: e.target.value }))
+                    }
+                    required
+                    placeholder="Ex.: Festa Junina Solidária"
+                  />
                 </div>
 
-                {canEditEvents && (
-                  <div style={eventActions}>
-                    <button
-                      type="button"
-                      style={btnEdit}
-                      onClick={() => {
-                        setEditing(ev);
-                        setForm({
-                          title: ev.title || "",
-                          date: ev.date || "",
-                          location: ev.location || "",
-                          description: ev.description || "",
-                        });
-                      }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      style={btnDelete}
-                      onClick={() => handleDelete(ev.id)}
-                    >
-                      Excluir
-                    </button>
-                  </div>
-                )}
+                <div>
+                  <label style={label} htmlFor="date">
+                    Data
+                  </label>
+                  <input
+                    id="date"
+                    type="date"
+                    style={input}
+                    value={form.date}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, date: e.target.value }))
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label style={label} htmlFor="location">
+                    Local
+                  </label>
+                  <input
+                    id="location"
+                    style={input}
+                    value={form.location}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, location: e.target.value }))
+                    }
+                    placeholder="Ex.: Ginásio Municipal"
+                  />
+                </div>
               </div>
-            ))
+
+              <div style={textAreaRow}>
+                <label style={label} htmlFor="description">
+                  Descrição
+                </label>
+                <textarea
+                  id="description"
+                  style={textArea}
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, description: e.target.value }))
+                  }
+                  placeholder="Detalhes sobre o evento, horário, atividades, etc."
+                />
+              </div>
+
+              <div style={formActions}>
+                {editing && (
+                  <button
+                    type="button"
+                    style={btnSecondary}
+                    onClick={() => {
+                      setEditing(null);
+                      setForm({
+                        title: "",
+                        date: "",
+                        location: "",
+                        description: "",
+                      });
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                )}
+
+                <button type="submit" style={btnPrimary}>
+                  {editing ? "Salvar alterações" : "Cadastrar evento"}
+                </button>
+              </div>
+            </form>
           )}
-        </section>
 
-        {/* Imagem informativa abaixo dos eventos */}
-        <div style={infoImageWrap}>
-          <img
-            src="/images/info.jpg"
-            alt="Informações APAE-Pinhão"
-            style={infoImage}
-          />
-        </div>
+          <section style={listCard}>
+            {loading ? (
+              <div style={empty}>Carregando eventos...</div>
+            ) : events.length === 0 ? (
+              <div style={empty}>Nenhum evento cadastrado no momento.</div>
+            ) : (
+              events.map((ev) => (
+                <div key={ev.id} style={eventItem}>
+                  <div style={eventMain}>
+                    <div style={eventTitle}>
+                      {ev.title || "Evento sem título"}
+                    </div>
+                    <div style={eventMeta}>
+                      {ev.date && (
+                        <>
+                          <strong>Data:</strong> {ev.date}
+                          {" | "}
+                        </>
+                      )}
+                      {ev.location && (
+                        <>
+                          <strong>Local:</strong> {ev.location}
+                        </>
+                      )}
+                    </div>
+                    {ev.description && (
+                      <div style={eventDesc}>{ev.description}</div>
+                    )}
+                  </div>
 
-        <p style={note}>
-          * A criação e edição de eventos é restrita a administradores ou
-          colaboradores autorizados (canEditEvents). Visitantes podem apenas
-          visualizar a agenda.
-        </p>
-      </main>
+                  {canEditEvents && (
+                    <div style={eventActions}>
+                      <button
+                        type="button"
+                        style={btnEdit}
+                        onClick={() => {
+                          setEditing(ev);
+                          setForm({
+                            title: ev.title || "",
+                            date: ev.date || "",
+                            location: ev.location || "",
+                            description: ev.description || "",
+                          });
+                        }}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        style={btnDelete}
+                        onClick={() => handleDelete(ev.id)}
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </section>
+
+          <div style={infoImageWrap}>
+            <img
+              src="/images/info.jpg"
+              alt="Informações APAE-Pinhão"
+              style={infoImage}
+            />
+          </div>
+
+          <p style={note}>
+            * A criação e edição de eventos é restrita a administradores ou
+            colaboradores autorizados (canEditEvents). Visitantes podem apenas
+            visualizar a agenda.
+          </p>
+        </main>
+      </div>
     </>
   );
 }

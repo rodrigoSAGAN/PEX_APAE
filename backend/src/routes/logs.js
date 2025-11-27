@@ -3,8 +3,6 @@ import { db, admin } from "../db/firestore.js";
 
 const router = Router();
 
-//Apenas ADMIN pode ver logs de auditoria
-
 async function requireAdmin(req, res, next) {
   try {
     const authHeader = req.headers.authorization || "";
@@ -34,7 +32,6 @@ async function requireAdmin(req, res, next) {
   }
 }
 
-//retorna logs recentes
 router.get("/", requireAdmin, async (req, res) => {
   try {
     const rawLimit = parseInt(req.query.limit, 10);
@@ -67,6 +64,49 @@ router.get("/", requireAdmin, async (req, res) => {
     res.json(list);
   } catch (e) {
     console.error("[logs] GET / error:", e);
+    res.status(500).json({ error: "internal_error", message: e.message });
+  }
+});
+
+router.post("/", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization || "";
+    const [, token] = authHeader.split(" ");
+
+    if (!token) {
+      return res.status(401).json({ error: "missing_token" });
+    }
+
+    const decoded = await admin.auth().verifyIdToken(token);
+    const roles = Array.isArray(decoded.roles) ? decoded.roles : [];
+    const canEditStore = decoded.canEditStore === true;
+    const canEditEvents = decoded.canEditEvents === true;
+    const isAdmin = roles.includes("admin");
+
+    if (!isAdmin && !canEditStore && !canEditEvents) {
+      return res.status(403).json({ error: "forbidden" });
+    }
+
+    const { action, details, entityId, entityName, type, newStatus, userName } = req.body;
+
+    const logData = {
+      action,
+      details,
+      entityId: entityId || null,
+      entityName: entityName || null,
+      type: type || "general",
+      newStatus: newStatus !== undefined ? newStatus : null,
+      userEmail: decoded.email,
+      userId: decoded.uid,
+      userName: userName || decoded.name || decoded.email || "Usuário",
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    const docRef = await db.collection("logs").add(logData);
+
+    res.status(201).json({ id: docRef.id, ...logData });
+  } catch (e) {
+    console.error("[logs] POST / error:", e);
     res.status(500).json({ error: "internal_error", message: e.message });
   }
 });

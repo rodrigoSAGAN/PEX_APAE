@@ -18,7 +18,49 @@ export default function LoginPage() {
     setErr("");
     setBusy(true);
     try {
-      await signInWithEmailAndPassword(auth, email, pass);
+      const userCred = await signInWithEmailAndPassword(auth, email, pass);
+      const user = userCred.user;
+
+      try {
+        const localRaw = localStorage.getItem("portal-apae-cart");
+        const token = await user.getIdToken();
+        
+        if (localRaw) {
+          const localCart = JSON.parse(localRaw);
+          
+          const res = await fetch("/api/cart/merge", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ localItems: localCart }),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.items) {
+              localStorage.setItem("portal-apae-cart", JSON.stringify(data.items));
+            }
+          }
+        } else {
+          const res = await fetch("/api/cart", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          
+          if (res.ok) {
+            const data = await res.json();
+            if (data.items) {
+              localStorage.setItem("portal-apae-cart", JSON.stringify(data.items));
+            }
+          }
+        }
+      } catch (cartErr) {
+        console.error("Erro ao sincronizar carrinho:", cartErr);
+      }
+
       router.push("/home");
     } catch (e) {
       setErr(e?.message || "Falha no login");
@@ -27,7 +69,6 @@ export default function LoginPage() {
     }
   }
 
-  //estilo
   const page = {
     minHeight: "calc(100svh - 56px)",
     display: "grid",

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Nav from "../../components/Nav";
 import { getIdTokenOrNull } from "../../lib/authToken";
+import { useModal } from "../../components/ModalContext";
 
 const DONATION_ITEMS = {
   "donation-10": {
@@ -31,6 +32,7 @@ const DONATION_ITEMS = {
 
 export default function CartPage() {
   const router = useRouter();
+  const { showModal } = useModal();
 
   const [cartMap, setCartMap] = useState({});
   const [items, setItems] = useState([]);
@@ -39,13 +41,11 @@ export default function CartPage() {
   const [readyToPersist, setReadyToPersist] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Modal de agradecimento
   const [showThanksModal, setShowThanksModal] = useState(false);
   const [pixData, setPixData] = useState(null);
 
   const API = "/api/products";
 
-  // Carrinho (localStorage)
   useEffect(() => {
     try {
       const raw =
@@ -131,7 +131,6 @@ export default function CartPage() {
     load();
   }, [cartMap]);
 
-  // Helpers
   function formatCurrency(value) {
     const num = Number(value) || 0;
     return num.toLocaleString("pt-BR", {
@@ -178,37 +177,56 @@ export default function CartPage() {
     if (!code) return;
     try {
       await navigator.clipboard.writeText(code);
-      alert("Código PIX copiado para a área de transferência!");
+      showModal("Código PIX copiado para a área de transferência!", "Sucesso");
     } catch (e) {
       console.error("Erro ao copiar código PIX:", e);
-      alert("Não foi possível copiar o código PIX, copie manualmente.");
+      showModal("Não foi possível copiar o código PIX, copie manualmente.", "Erro");
     }
   }
 
-  //Checkout e criação do pix
+  const [pickupName, setPickupName] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+
+  function handlePhoneChange(e) {
+    let val = e.target.value.replace(/\D/g, "");
+    if (val.length > 11) val = val.slice(0, 11);
+    
+    if (val.length > 2) {
+      val = `(${val.slice(0, 2)}) ${val.slice(2)}`;
+    }
+    if (val.length > 9) {
+      val = `${val.slice(0, 9)}-${val.slice(9)}`;
+    }
+    setWhatsapp(val);
+  }
+
   async function handleCheckout() {
     try {
       setErr("");
 
       if (!items.length) {
-        alert("Seu carrinho está vazio.");
+        showModal("Seu carrinho está vazio.", "Aviso");
         return;
       }
 
       if (!total || Number.isNaN(total) || total <= 0) {
-        alert("Valor total do carrinho inválido.");
+        showModal("Valor total do carrinho inválido.", "Erro");
+        return;
+      }
+
+      if (!pickupName.trim()) {
+        showModal("Por favor, informe o nome de quem vai retirar o pedido.", "Atenção");
+        return;
+      }
+
+      if (whatsapp && whatsapp.replace(/\D/g, "").length < 11) {
+        showModal("Por favor, informe um número de WhatsApp válido com DDD (11 dígitos).", "Atenção");
         return;
       }
 
       const token = await getIdTokenOrNull();
-      if (!token) {
-        alert("Você precisa estar logado para finalizar o pedido.");
-        return;
-      }
-
+      
       setSubmitting(true);
-
-      // Monta itens do pedido
       const orderItems = items.map(({ product, quantity }) => ({
         productId: product.id,
         name: product.name || product.title || "",
@@ -220,15 +238,20 @@ export default function CartPage() {
       const payload = {
         items: orderItems,
         totalValue: total,
+        pickupName: pickupName.trim(),
+        phoneWhatsApp: whatsapp.replace(/\D/g, "") || null,
       };
 
-      //Registra pedido na API
+      const headers = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
       const res = await fetch("/api/orders", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers,
         body: JSON.stringify(payload),
       });
 
@@ -238,14 +261,12 @@ export default function CartPage() {
           const data = await res.json();
           if (data?.message) msg = data.message;
         } catch (_) {
-          // ignora erro de parse
         }
         setErr(msg);
-        alert(msg);
+        showModal(msg, "Erro");
         return;
       }
 
-      // Cria pagamento PIX com o total do carrinho
       try {
         const pixRes = await fetch("/api/pix", {
           method: "POST",
@@ -287,7 +308,6 @@ export default function CartPage() {
         return;
       }
 
-      //Limpa o carrinho e mostra modal
       setCartMap({});
       setShowThanksModal(true);
     } catch (e) {
@@ -304,7 +324,6 @@ export default function CartPage() {
     router.push("/products");
   }
 
-  //(tratando vários formatos pix)
   const pixQrBase64 =
     pixData?.qr_code_base64 || pixData?.qrCodeBase64 || null;
 
@@ -313,7 +332,6 @@ export default function CartPage() {
 
   const pixTicketUrl = pixData?.ticket_url || pixData?.ticketUrl || "";
 
-  //Estilos
   const page = {
     minHeight: "calc(100svh - 56px)",
     padding: 16,
@@ -446,7 +464,15 @@ export default function CartPage() {
     opacity: submitting ? 0.7 : 1,
   };
 
-  // cards de doação
+  const inputStyle = {
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 8,
+    border: "1px solid #d1d5db",
+    fontSize: 14,
+    marginBottom: 12,
+  };
+
   const donationSection = {
     marginTop: 32,
   };
@@ -518,7 +544,6 @@ export default function CartPage() {
     boxShadow: "0 6px 14px rgba(250,204,21,0.45)",
   };
 
-  // modal do pix ( agradecimento)
   const modalOverlay = {
     position: "fixed",
     inset: 0,
@@ -717,19 +742,45 @@ export default function CartPage() {
               </div>
 
               <div style={totalBox}>
-                <div>
-                  <span style={totalLabel}>Total geral:</span>
-                  <span style={totalValue}>{formatCurrency(total)}</span>
+                <div style={{ width: "100%", marginBottom: 16 }}>
+                  <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 14 }}>
+                    Nome de quem vai retirar <span style={{ color: "red" }}>*</span>
+                  </label>
+                  <input
+                    style={inputStyle}
+                    placeholder="Ex: João da Silva"
+                    value={pickupName}
+                    onChange={(e) => setPickupName(e.target.value)}
+                    required
+                  />
+
+                  <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 14 }}>
+                    WhatsApp para contato (opcional)
+                  </label>
+                  <input
+                    style={inputStyle}
+                    placeholder="(00) 00000-0000"
+                    value={whatsapp}
+                    onChange={handlePhoneChange}
+                    maxLength={15}
+                  />
                 </div>
 
-                <button
-                  type="button"
-                  style={payBtn}
-                  onClick={handleCheckout}
-                  disabled={submitting}
-                >
-                  {submitting ? "Gerando PIX..." : "Pagar com PIX"}
-                </button>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+                  <div>
+                    <span style={totalLabel}>Total geral:</span>
+                    <span style={totalValue}>{formatCurrency(total)}</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    style={payBtn}
+                    onClick={handleCheckout}
+                    disabled={submitting}
+                  >
+                    {submitting ? "Gerando PIX..." : "Pagar com PIX"}
+                  </button>
+                </div>
               </div>
             </>
           )}
@@ -740,7 +791,6 @@ export default function CartPage() {
           itens, utilize esta tela ou a página de <strong>Produtos</strong>.
         </p>
 
-        {/* Seção de Doações */}
         <section style={donationSection}>
           <h3 style={donationTitle}>Apoie a APAE – Pinhão com uma doação</h3>
           <p style={donationSubtitle}>
@@ -749,7 +799,6 @@ export default function CartPage() {
           </p>
 
           <div style={donationGrid}>
-            {/* Doação 10 */}
             <div style={donationCard}>
               <img
                 src={DONATION_ITEMS["donation-10"].imageUrl}
@@ -769,7 +818,6 @@ export default function CartPage() {
               </button>
             </div>
 
-            {/* Doação 30 */}
             <div style={donationCard}>
               <img
                 src={DONATION_ITEMS["donation-30"].imageUrl}
@@ -789,7 +837,6 @@ export default function CartPage() {
               </button>
             </div>
 
-            {/* Doação 100 */}
             <div style={donationCard}>
               <img
                 src={DONATION_ITEMS["donation-100"].imageUrl}
@@ -811,7 +858,6 @@ export default function CartPage() {
           </div>
         </section>
 
-        {/* Modal PIX / agradecimento */}
         {showThanksModal && (
           <div style={modalOverlay}>
             <div style={modalCard}>

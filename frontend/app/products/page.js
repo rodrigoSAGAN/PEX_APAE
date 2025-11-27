@@ -1,16 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Nav from "../../components/Nav";
+import SideMenu from "../../components/SideMenu";
 import { getIdTokenOrNull } from "../../lib/authToken";
+import { auth } from "../../lib/firebase";
+import { useModal } from "../../components/ModalContext";
 
 export default function ProductsPage() {
+  const router = useRouter();
+  const { showModal, showConfirm } = useModal();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
-  // criação/edição
   const [form, setForm] = useState({
     name: "",
     price: "",
@@ -19,23 +24,17 @@ export default function ProductsPage() {
   });
   const [editing, setEditing] = useState(null);
 
-  // upload de imagem
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
 
-  // permissão para editar loja
   const [canEdit, setCanEdit] = useState(false);
+  const [claims, setClaims] = useState(null);
 
-  // carrinho local
   const [cart, setCart] = useState({});
 
-  // filtro por categoria
   const [filterClass, setFilterClass] = useState("all"); 
 
-  // API de produtos
   const API = "/api/products";
-
-  // Carrinho: carregar e salvar em localStorage 
 
   useEffect(() => {
     try {
@@ -66,22 +65,35 @@ export default function ProductsPage() {
   }, [cart]);
 
   function addToCart(product) {
-    setCart((prev) => {
-      const current = prev[product.id] || 0;
-      const rawStock = product.stock ?? 0;
-      const stockNumber =
-        typeof rawStock === "number" ? rawStock : Number(rawStock);
+    const newQ = (cart[product.id] || 0) + 1;
+    const rawStock = product.stock ?? 0;
+    const stockNumber =
+      typeof rawStock === "number" ? rawStock : Number(rawStock);
 
-      //garante que so adiciona qtdd que há no estoque
-      if (stockNumber > 0 && current >= stockNumber) {
-        return prev;
-      }
+    if (stockNumber > 0 && newQ > stockNumber) {
+       showModal("Quantidade solicitada excede o estoque disponível.", "Aviso");
+       return;
+    }
 
-      return { ...prev, [product.id]: current + 1 };
-    });
+    const newCart = { ...cart, [product.id]: newQ };
+    setCart(newCart);
+    localStorage.setItem("portal-apae-cart", JSON.stringify(newCart));
+
+    if (auth.currentUser) {
+      auth.currentUser.getIdToken().then(token => {
+        fetch("/api/cart", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ items: newCart }),
+        }).catch(err => console.error("Erro ao salvar carrinho remoto:", err));
+      });
+    }
+
+    router.push("/carrinho");
   }
-
-  //Carrega produtos
 
   async function load() {
     setErr("");
@@ -99,14 +111,13 @@ export default function ProductsPage() {
     }
   }
 
-  //Verificar permissões
-
   async function checkPermissions() {
     try {
       const token = await getIdTokenOrNull();
       if (!token) {
         console.log("[products] usuário não logado, sem permissão de edição.");
         setCanEdit(false);
+        setClaims(null);
         return;
       }
 
@@ -123,17 +134,12 @@ export default function ProductsPage() {
         payloadBase64.replace(/-/g, "+").replace(/_/g, "/")
       );
       const payload = JSON.parse(payloadJson);
+      setClaims(payload);
 
       const roles = Array.isArray(payload.roles) ? payload.roles : [];
       const isAdmin = roles.includes("admin");
       const isColab = roles.includes("colaborador");
       const canEditStore = payload.canEditStore === true;
-
-      console.log("[products] payload JWT:", payload);
-      console.log("[products] roles:", roles);
-      console.log("[products] isAdmin:", isAdmin);
-      console.log("[products] isColab:", isColab);
-      console.log("[products] canEditStore:", canEditStore);
 
       const allow = isAdmin || (isColab && canEditStore);
       setCanEdit(allow);
@@ -149,7 +155,6 @@ export default function ProductsPage() {
     
   }, []);
 
-  //CRUD de produtos
 
   async function handleSave(e) {
     e.preventDefault();
@@ -157,8 +162,9 @@ export default function ProductsPage() {
     try {
       const token = await getIdTokenOrNull();
       if (!token) {
-        return alert(
-          "Faça login como ADMIN ou colaborador de cozinha autorizado para executar esta ação."
+        return showModal(
+          "Faça login como ADMIN ou colaborador de cozinha autorizado para executar esta ação.",
+          "Acesso Negado"
         );
       }
 
@@ -209,7 +215,7 @@ export default function ProductsPage() {
             : res.status === 403
             ? "Permissão negada. Apenas ADMIN ou colaborador de cozinha autorizado pode editar a loja."
             : "Falha ao salvar produto.";
-        return alert(msg);
+        return showModal(msg, "Erro");
       }
 
       setForm({ name: "", price: "", stock: "", category: "" });
@@ -219,17 +225,18 @@ export default function ProductsPage() {
       await load();
     } catch (e) {
       console.error("[products] erro ao salvar produto:", e);
-      alert("Erro inesperado ao salvar produto.");
+      showModal("Erro inesperado ao salvar produto.", "Erro");
     }
   }
 
   async function handleDelete(id) {
-    if (!confirm("Excluir este produto?")) return;
+    if (!(await showConfirm("Excluir este produto?"))) return;
     try {
       const token = await getIdTokenOrNull();
       if (!token) {
-        return alert(
-          "Faça login como ADMIN ou colaborador de cozinha autorizado para executar esta ação."
+        return showModal(
+          "Faça login como ADMIN ou colaborador de cozinha autorizado para executar esta ação.",
+          "Acesso Negado"
         );
       }
 
@@ -247,17 +254,15 @@ export default function ProductsPage() {
             : res.status === 404
             ? "Produto não encontrado."
             : "Falha ao excluir produto.";
-        return alert(msg);
+        return showModal(msg, "Erro");
       }
 
       await load();
     } catch (e) {
       console.error("[products] erro ao excluir produto:", e);
-      alert("Erro inesperado ao excluir produto.");
+      showModal("Erro inesperado ao excluir produto.", "Erro");
     }
   }
-
-  //Filtro por categoria
 
   const filteredItems = items.filter((p) => {
     if (filterClass === "all") return true;
@@ -265,16 +270,29 @@ export default function ProductsPage() {
     return cat === filterClass;
   });
 
-  // estilos
-
-  const wrap = {
+  const wrapGrid = {
     padding: 16,
-    maxWidth: 1080,
-    margin: "24px auto",
+    maxWidth: 1200,
+    margin: "0 auto",
+    display: "grid",
+    gridTemplateColumns: "260px 1fr",
+    gap: 16,
+  };
+
+  const wrapFull = {
+    padding: 16,
+    maxWidth: 1200,
+    margin: "0 auto",
+    display: "block",
+  };
+
+  const mainContent = {
     background:
       "linear-gradient(135deg, rgba(219,234,254,0.85), rgba(239,246,255,0.9))",
     borderRadius: 24,
     boxShadow: "0 12px 30px rgba(15,23,42,0.08)",
+    padding: 24,
+    minWidth: 0,
   };
 
   const h2 = {
@@ -282,13 +300,6 @@ export default function ProductsPage() {
     margin: "12px 0 16px 0",
     color: "#111827",
     fontSize: 26,
-  };
-
-  const note = {
-    fontSize: 12,
-    color: "#6b7280",
-    textAlign: "center",
-    marginTop: 10,
   };
 
   const filterBar = {
@@ -342,7 +353,6 @@ export default function ProductsPage() {
     boxShadow: "0 6px 14px rgba(37,99,235,0.45)",
   };
 
-  //cards
   const cardsGrid = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
@@ -462,12 +472,6 @@ export default function ProductsPage() {
     flexShrink: 0,
   };
 
-  const cartLabel = {
-    marginLeft: 4,
-    fontSize: 11,
-    color: "#ecfdf5",
-  };
-
   const esgotadoBadge = {
     ...btnCart,
     background: "#9ca3af",
@@ -549,306 +553,339 @@ export default function ProductsPage() {
     border: "1px solid #e5e7eb",
   };
 
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkSize = () => setIsMobile(window.innerWidth < 768);
+    checkSize();
+    window.addEventListener("resize", checkSize);
+    return () => window.removeEventListener("resize", checkSize);
+  }, []);
+
+  const showSidebar = !isMobile && claims;
+
   return (
     <>
       <Nav />
-      <main style={wrap}>
-        <h2 style={h2}>Produtos</h2>
+      <div style={showSidebar ? wrapGrid : wrapFull}>
+        {showSidebar && <SideMenu claims={claims} />}
+        
+        <main style={mainContent}>
+          <h2 style={h2}>Produtos</h2>
 
-        {/* Barra de filtro + info do carrinho */}
-        <div style={filterBar}>
-          <div>
-            <span style={filterLabel}>Filtrar por classe:&nbsp;</span>
-            <select
-              value={filterClass}
-              onChange={(e) => setFilterClass(e.target.value)}
-              style={select}
-            >
-              <option value="all">Todas</option>
-              <option value="artigos">Artigos</option>
-              <option value="cozinha">Cozinha</option>
-            </select>
-          </div>
-
-          <div style={cartInfoWrap}>
-            <div style={cartInfoText}>
-              Itens no carrinho:{" "}
-              <strong>
-                {Object.values(cart).reduce((acc, n) => acc + n, 0)}
-              </strong>
-            </div>
-            <Link href="/carrinho" style={cartButton}>
-              Ver carrinho
-            </Link>
-          </div>
-        </div>
-
-        {/* Form de criação/edição */}
-        {canEdit && (
-          <form onSubmit={handleSave} style={formWrap}>
-            <div style={formRow}>
-              <input
-                placeholder="Nome"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                required
-                style={inputSmall}
-              />
-              <input
-                placeholder="Preço"
-                type="number"
-                step="0.01"
-                value={form.price}
-                onChange={(e) => setForm({ ...form, price: e.target.value })}
-                required
-                style={inputSmall}
-              />
-              <input
-                placeholder="Estoque"
-                type="number"
-                value={form.stock}
-                onChange={(e) => setForm({ ...form, stock: e.target.value })}
-                required
-                style={inputSmall}
-              />
-              <input
-                placeholder="Categoria (artigos, cozinha, ...)"
-                value={form.category}
-                onChange={(e) =>
-                  setForm({ ...form, category: e.target.value })
-                }
-                style={inputSmall}
-              />
-
-              {/* Upload de imagem */}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    setImageFile(file);
-                    setImagePreview(URL.createObjectURL(file));
-                  } else {
-                    setImageFile(null);
-                    setImagePreview("");
-                  }
-                }}
-                style={fileInput}
-              />
-
-              <button
-                type="submit"
-                style={{
-                  background: "#16a34a",
-                  color: "#fff",
-                  border: "none",
-                  padding: "8px 14px",
-                  borderRadius: 999,
-                  cursor: "pointer",
-                  fontWeight: 700,
-                  fontSize: 13,
-                }}
+          <div style={filterBar}>
+            <div>
+              <span style={filterLabel}>Filtrar por classe:&nbsp;</span>
+              <select
+                value={filterClass}
+                onChange={(e) => setFilterClass(e.target.value)}
+                style={select}
               >
-                {editing ? "Salvar" : "Adicionar"}
-              </button>
+                <option value="all">Todas</option>
+                <option value="artigos">Artigos</option>
+                <option value="cozinha">Cozinha</option>
+              </select>
+            </div>
 
-              {editing && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditing(null);
-                    setForm({
-                      name: "",
-                      price: "",
-                      stock: "",
-                      category: "",
-                    });
-                    setImageFile(null);
-                    setImagePreview("");
+            <div style={cartInfoWrap}>
+              <div style={cartInfoText}>
+                Itens no carrinho:{" "}
+                <strong>
+                  {Object.values(cart).reduce((acc, n) => acc + n, 0)}
+                </strong>
+              </div>
+              <Link href="/carrinho" style={cartButton}>
+                Ver carrinho
+              </Link>
+            </div>
+          </div>
+
+          {canEdit && (
+            <form onSubmit={handleSave} style={formWrap}>
+              <div style={formRow}>
+                <input
+                  placeholder="Nome"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  required
+                  style={inputSmall}
+                />
+                <input
+                  placeholder="Preço"
+                  type="number"
+                  step="0.01"
+                  value={form.price}
+                  onChange={(e) => setForm({ ...form, price: e.target.value })}
+                  required
+                  style={inputSmall}
+                />
+                <input
+                  placeholder="Estoque"
+                  type="number"
+                  value={form.stock}
+                  onChange={(e) => setForm({ ...form, stock: e.target.value })}
+                  required
+                  style={inputSmall}
+                />
+                <input
+                  placeholder="Categoria (artigos, cozinha, ...)"
+                  value={form.category}
+                  onChange={(e) =>
+                    setForm({ ...form, category: e.target.value })
+                  }
+                  style={inputSmall}
+                />
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setImageFile(file);
+                      setImagePreview(URL.createObjectURL(file));
+                    } else {
+                      setImageFile(null);
+                      setImagePreview("");
+                    }
                   }}
+                  style={fileInput}
+                />
+
+                <button
+                  type="submit"
                   style={{
-                    background: "#9ca3af",
+                    background: "#16a34a",
                     color: "#fff",
                     border: "none",
                     padding: "8px 14px",
                     borderRadius: 999,
                     cursor: "pointer",
-                    fontWeight: 600,
+                    fontWeight: 700,
                     fontSize: 13,
                   }}
                 >
-                  Cancelar
+                  {editing ? "Salvar" : "Adicionar"}
                 </button>
-              )}
-            </div>
 
-            {imagePreview && (
-              <div style={previewBox}>
-                Pré-visualização da imagem:
-                <br />
-                <img
-                  src={imagePreview}
-                  alt="Pré-visualização"
-                  style={previewImg}
-                />
+                {editing && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditing(null);
+                      setForm({
+                        name: "",
+                        price: "",
+                        stock: "",
+                        category: "",
+                      });
+                      setImageFile(null);
+                      setImagePreview("");
+                    }}
+                    style={{
+                      background: "#9ca3af",
+                      color: "#fff",
+                      border: "none",
+                      padding: "8px 14px",
+                      borderRadius: 999,
+                      cursor: "pointer",
+                      fontWeight: 600,
+                      fontSize: 13,
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                )}
               </div>
-            )}
-          </form>
-        )}
 
-        {loading && <div style={{ textAlign: "center" }}>Carregando...</div>}
-        {err && (
-          <div style={{ color: "crimson", textAlign: "center" }}>{err}</div>
-        )}
-        {!loading && !err && items.length === 0 && (
-          <div style={{ textAlign: "center", color: "#6b7280" }}>
-            Nenhum produto cadastrado.
-          </div>
-        )}
+              {imagePreview && (
+                <div style={previewBox}>
+                  Pré-visualização da imagem:
+                  <br />
+                  <img
+                    src={imagePreview}
+                    alt="Pré-visualização"
+                    style={previewImg}
+                  />
+                </div>
+              )}
+            </form>
+          )}
 
-        {/* Se há itens */}
-        {!loading &&
-          !err &&
-          items.length > 0 &&
-          filteredItems.length === 0 && (
+          {loading && <div style={{ textAlign: "center" }}>Carregando...</div>}
+          {err && (
+            <div style={{ color: "crimson", textAlign: "center" }}>{err}</div>
+          )}
+          {!loading && !err && items.length === 0 && (
             <div style={{ textAlign: "center", color: "#6b7280" }}>
-              Nenhum produto encontrado para a classe selecionada.
+              Nenhum produto cadastrado.
             </div>
           )}
 
-        {/* Grid de cards */}
-        {filteredItems.length > 0 && (
-          <div style={cardsGrid}>
-            {filteredItems.map((p) => {
-              const price = "price" in p ? Number(p.price) : null;
-              const rawStock = "stock" in p ? p.stock : null;
-              const stockNumber =
-                rawStock !== null
-                  ? typeof rawStock === "number"
-                    ? rawStock
-                    : Number(rawStock)
-                  : null;
-              const qtyInCart = cart[p.id] || 0;
+          {!loading &&
+            !err &&
+            items.length > 0 &&
+            filteredItems.length === 0 && (
+              <div style={{ textAlign: "center", color: "#6b7280" }}>
+                Nenhum produto encontrado para a classe selecionada.
+              </div>
+            )}
 
-              const available =
-                stockNumber !== null ? stockNumber - qtyInCart : null;
-              const isOutOfStock =
-                stockNumber !== null && (stockNumber <= 0 || available <= 0);
+          {filteredItems.length > 0 && (
+            <div style={cardsGrid}>
+              {filteredItems.map((p) => {
+                const price = "price" in p ? Number(p.price) : null;
+                const rawStock = "stock" in p ? p.stock : null;
+                const stockNumber =
+                  rawStock !== null
+                    ? typeof rawStock === "number"
+                      ? rawStock
+                      : Number(rawStock)
+                    : null;
+                const qtyInCart = cart[p.id] || 0;
 
-              return (
-                <div key={p.id} style={card}>
-                  <div style={imageWrap}>
-                    {p.imageUrl ? (
-                      <img
-                        src={p.imageUrl}
-                        alt={p.name || p.title || "Produto"}
-                        style={cardImg}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          ...cardImg,
-                          display: "grid",
-                          placeItems: "center",
-                          color: "#9ca3af",
-                          fontSize: 12,
-                        }}
-                      >
-                        Sem imagem
-                      </div>
-                    )}
-                  </div>
+                const available =
+                  stockNumber !== null ? stockNumber - qtyInCart : null;
+                const isOutOfStock =
+                  stockNumber !== null && (stockNumber <= 0 || available <= 0);
 
-                  <div style={cardBody}>
-                    <div style={titleRow}>
-                      <div style={prodName}>{p.name || p.title}</div>
-                      <div style={categoryChip}>
-                        {(p.category || "Sem categoria").toString()}
-                      </div>
-                    </div>
-
-                    <div style={priceText}>
-                      {price !== null ? `R$ ${price.toFixed(2)}` : "—"}
-                    </div>
-
-                    <div style={metaRow}>
-                      <span>
-                        {stockNumber !== null
-                          ? `${stockNumber} un.`
-                          : "Estoque não inf."}
-                      </span>
-                      <span
-                        style={
-                          p.active === false ? statusInativo : statusAtivo
-                        }
-                      >
-                        {p.active === false ? "Inativo" : "Ativo"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div style={cardFooter}>
-                    {isOutOfStock ? (
-                      <div style={esgotadoBadge}>Esgotado</div>
-                    ) : (
-                      <button
-                        type="button"
-                        style={btnCart}
-                        onClick={() => addToCart(p)}
-                      >
-                        Comprar
-                        {qtyInCart > 0 && (
-                          <span style={cartLabel}>
-                            ({qtyInCart} no carrinho)
-                          </span>
-                        )}
-                      </button>
-                    )}
-
-                    {canEdit && (
-                      <div style={adminActions}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditing(p);
-                            setForm({
-                              name: p.name || p.title || "",
-                              price: p.price ?? "",
-                              stock: p.stock ?? "",
-                              category: p.category || "",
-                            });
-                            setImageFile(null);
-                            setImagePreview(p.imageUrl || "");
+                return (
+                  <div key={p.id} style={card}>
+                    <div style={imageWrap}>
+                      {p.imageUrl ? (
+                        <img
+                          src={p.imageUrl}
+                          alt={p.name || p.title || "Produto"}
+                          style={cardImg}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            ...cardImg,
+                            display: "grid",
+                            placeItems: "center",
+                            color: "#9ca3af",
+                            fontSize: 12,
                           }}
-                          style={btnEdit}
                         >
-                          Editar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(p.id)}
-                          style={btnDelete}
-                        >
-                          Excluir
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                          Sem imagem
+                        </div>
+                      )}
+                    </div>
 
-        <p style={note}>
-          * Dados servidos pelo backend em <code>/api/products</code>. Operações
-          de escrita exigem usuário ADMIN ou colaborador de cozinha autorizado
-          (Firebase). O carrinho é local (salvo no navegador). Caso envie uma
-          imagem, o backend deve aceitar multipart/form-data com o campo{" "}
-          <code>image</code>.
-        </p>
-      </main>
+                    <div style={cardBody}>
+                      <div style={titleRow}>
+                        <div style={prodName}>{p.name || p.title}</div>
+                        <div style={categoryChip}>
+                          {(p.category || "Sem categoria").toString()}
+                        </div>
+                      </div>
+
+                      <div style={priceText}>
+                        {price !== null ? `R$ ${price.toFixed(2)}` : "—"}
+                      </div>
+
+                      <div style={metaRow}>
+                        <span>
+                          {stockNumber !== null
+                            ? `${stockNumber} un.`
+                            : "Estoque não inf."}
+                        </span>
+                        <span
+                          style={
+                            p.active === false ? statusInativo : statusAtivo
+                          }
+                        >
+                          {p.active === false ? "Inativo" : "Ativo"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={cardFooter}>
+                      {isOutOfStock ? (
+                        <div style={esgotadoBadge}>Esgotado</div>
+                      ) : (
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button
+                            type="button"
+                            style={{
+                              ...btnCart,
+                              background: "#f3f4f6",
+                              color: "#1f2937",
+                              border: "1px solid #d1d5db",
+                              boxShadow: "none",
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const newQ = (cart[p.id] || 0) + 1;
+                              const newCart = { ...cart, [p.id]: newQ };
+                              setCart(newCart);
+                              localStorage.setItem("portal-apae-cart", JSON.stringify(newCart));
+                              
+                              if (auth.currentUser) {
+                                auth.currentUser.getIdToken().then(token => {
+                                  fetch("/api/cart", {
+                                    method: "POST",
+                                    headers: {
+                                      "Content-Type": "application/json",
+                                      Authorization: `Bearer ${token}`,
+                                    },
+                                    body: JSON.stringify({ items: newCart }),
+                                  }).catch(err => console.error("Erro ao salvar carrinho remoto:", err));
+                                });
+                              }
+                              
+                              showModal("Produto adicionado ao carrinho!", "Sucesso");
+                            }}
+                          >
+                            Adicionar
+                          </button>
+                          <button
+                            type="button"
+                            style={btnCart}
+                            onClick={() => addToCart(p)}
+                          >
+                            Comprar
+                          </button>
+                        </div>
+                      )}
+
+                      {canEdit && (
+                        <div style={adminActions}>
+                          <button
+                            type="button"
+                            style={btnEdit}
+                            onClick={() => {
+                              setEditing(p);
+                              setForm({
+                                name: p.name || "",
+                                price: p.price || "",
+                                stock: p.stock || "",
+                                category: p.category || "",
+                              });
+                              setImageFile(null);
+                              setImagePreview(p.imageUrl || "");
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                            }}
+                          >
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            style={btnDelete}
+                            onClick={() => handleDelete(p.id)}
+                          >
+                            Excluir
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </main>
+      </div>
     </>
   );
 }
