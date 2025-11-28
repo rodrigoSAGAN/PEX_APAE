@@ -77,6 +77,11 @@ export default function SideMenu({ claims }) {
                 Permissões
               </Link>
             </li>
+            <li>
+              <Link href="/galeria" style={getStyle("/galeria")}>
+                Galeria
+              </Link>
+            </li>
           </>
         )}
       </ul>

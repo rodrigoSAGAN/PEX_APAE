@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Nav from "../../components/Nav";
@@ -32,7 +32,12 @@ export default function ProductsPage() {
 
   const [cart, setCart] = useState({});
 
-  const [filterClass, setFilterClass] = useState("all"); 
+  const [filterClass, setFilterClass] = useState("all");
+
+  const [showCamera, setShowCamera] = useState(false);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [stream, setStream] = useState(null);
 
   const API = "/api/products";
 
@@ -64,6 +69,14 @@ export default function ProductsPage() {
     }
   }, [cart]);
 
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [stream]);
+
   function addToCart(product) {
     const newQ = (cart[product.id] || 0) + 1;
     const rawStock = product.stock ?? 0;
@@ -71,8 +84,8 @@ export default function ProductsPage() {
       typeof rawStock === "number" ? rawStock : Number(rawStock);
 
     if (stockNumber > 0 && newQ > stockNumber) {
-       showModal("Quantidade solicitada excede o estoque disponível.", "Aviso");
-       return;
+      showModal("Quantidade solicitada excede o estoque disponível.", "Aviso");
+      return;
     }
 
     const newCart = { ...cart, [product.id]: newQ };
@@ -80,7 +93,7 @@ export default function ProductsPage() {
     localStorage.setItem("portal-apae-cart", JSON.stringify(newCart));
 
     if (auth.currentUser) {
-      auth.currentUser.getIdToken().then(token => {
+      auth.currentUser.getIdToken().then((token) => {
         fetch("/api/cart", {
           method: "POST",
           headers: {
@@ -88,7 +101,7 @@ export default function ProductsPage() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ items: newCart }),
-        }).catch(err => console.error("Erro ao salvar carrinho remoto:", err));
+        }).catch((err) => console.error("Erro ao salvar carrinho remoto:", err));
       });
     }
 
@@ -152,9 +165,7 @@ export default function ProductsPage() {
   useEffect(() => {
     load();
     checkPermissions();
-    
   }, []);
-
 
   async function handleSave(e) {
     e.preventDefault();
@@ -174,7 +185,6 @@ export default function ProductsPage() {
       let res;
 
       if (imageFile) {
-        
         const formData = new FormData();
         formData.append("name", form.name);
         formData.append("price", String(Number(form.price)));
@@ -190,7 +200,6 @@ export default function ProductsPage() {
           body: formData,
         });
       } else {
-        
         const body = {
           name: form.name,
           price: Number(form.price),
@@ -213,8 +222,8 @@ export default function ProductsPage() {
           res.status === 401
             ? "Você não está autenticado."
             : res.status === 403
-            ? "Permissão negada. Apenas ADMIN ou colaborador de cozinha autorizado pode editar a loja."
-            : "Falha ao salvar produto.";
+              ? "Permissão negada. Apenas ADMIN ou colaborador de cozinha autorizado pode editar a loja."
+              : "Falha ao salvar produto.";
         return showModal(msg, "Erro");
       }
 
@@ -250,10 +259,10 @@ export default function ProductsPage() {
           res.status === 401
             ? "Você não está autenticado."
             : res.status === 403
-            ? "Permissão negada. Apenas ADMIN ou colaborador autorizado pode excluir."
-            : res.status === 404
-            ? "Produto não encontrado."
-            : "Falha ao excluir produto.";
+              ? "Permissão negada. Apenas ADMIN ou colaborador autorizado pode excluir."
+              : res.status === 404
+                ? "Produto não encontrado."
+                : "Falha ao excluir produto.";
         return showModal(msg, "Erro");
       }
 
@@ -283,11 +292,12 @@ export default function ProductsPage() {
   function handleQuickAdd(product) {
     const newQ = (cart[product.id] || 0) + 1;
     const rawStock = product.stock ?? 0;
-    const stockNumber = typeof rawStock === "number" ? rawStock : Number(rawStock);
+    const stockNumber =
+      typeof rawStock === "number" ? rawStock : Number(rawStock);
 
     if (stockNumber > 0 && newQ > stockNumber) {
-       showModal("Quantidade solicitada excede o estoque disponível.", "Aviso");
-       return;
+      showModal("Quantidade solicitada excede o estoque disponível.", "Aviso");
+      return;
     }
 
     const newCart = { ...cart, [product.id]: newQ };
@@ -295,7 +305,7 @@ export default function ProductsPage() {
     localStorage.setItem("portal-apae-cart", JSON.stringify(newCart));
 
     if (auth.currentUser) {
-      auth.currentUser.getIdToken().then(token => {
+      auth.currentUser.getIdToken().then((token) => {
         fetch("/api/cart", {
           method: "POST",
           headers: {
@@ -303,7 +313,7 @@ export default function ProductsPage() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ items: newCart }),
-        }).catch(err => console.error("Erro ao salvar carrinho remoto:", err));
+        }).catch((err) => console.error("Erro ao salvar carrinho remoto:", err));
       });
     }
   }
@@ -326,7 +336,7 @@ export default function ProductsPage() {
     localStorage.setItem("portal-apae-cart", JSON.stringify(newCart));
 
     if (auth.currentUser) {
-      auth.currentUser.getIdToken().then(token => {
+      auth.currentUser.getIdToken().then((token) => {
         fetch("/api/cart", {
           method: "POST",
           headers: {
@@ -334,24 +344,119 @@ export default function ProductsPage() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ items: newCart }),
-        }).catch(err => console.error("Erro ao salvar carrinho remoto:", err));
+        }).catch((err) => console.error("Erro ao salvar carrinho remoto:", err));
       });
+    }
+  }
+
+  async function startCamera() {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showModal("Seu navegador não suporta acesso à câmera.", "Erro");
+        return;
+      }
+
+      // Verifica se existem dispositivos de vídeo antes de tentar abrir
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter((device) => device.kind === "videoinput");
+        if (videoDevices.length === 0) {
+          showModal("Nenhuma câmera encontrada neste dispositivo.", "Aviso");
+          return;
+        }
+      } catch (e) {
+        console.warn("Erro ao listar dispositivos:", e);
+        // Continua mesmo se falhar ao listar, para tentar getUserMedia direto
+      }
+
+      let mediaStream;
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } },
+        });
+      } catch (err) {
+        console.warn("Falha ao abrir câmera com facingMode ideal, tentando fallback...", err);
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+        });
+      }
+
+      setStream(mediaStream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+      setShowCamera(true);
+    } catch (err) {
+      console.error("Erro ao acessar câmera:", err);
+      let msg = "Não foi possível acessar a câmera.";
+
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        msg = "Permissão de câmera negada. Verifique as configurações do seu navegador.";
+      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+        msg = "Nenhuma câmera encontrada.";
+      } else if (err.message) {
+        msg = err.message;
+      }
+
+      showModal(msg, "Erro");
+    }
+  }
+
+  function stopCamera() {
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      setStream(null);
+    }
+    setShowCamera(false);
+  }
+
+  function capturePhoto() {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext("2d");
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const file = new File([blob], `camera_capture_${Date.now()}.jpg`, {
+            type: "image/jpeg",
+          });
+          setImageFile(file);
+          setImagePreview(URL.createObjectURL(file));
+          stopCamera();
+        } else {
+          showModal("Falha ao processar a imagem capturada.", "Erro");
+        }
+      }, "image/jpeg", 0.4);
     }
   }
 
   return (
     <>
       <Nav />
-      <div className={`min-h-screen ${showSidebar ? "grid grid-cols-[260px_1fr] gap-6 max-w-[1400px] mx-auto px-6 pt-8 pb-[80px]" : "max-w-7xl mx-auto px-6 pt-12 pb-[80px]"}`}>
+      <div
+        className={`min-h-screen ${showSidebar
+          ? "grid grid-cols-[260px_1fr] gap-6 max-w-[1400px] mx-auto px-6 pt-8 pb-[80px]"
+          : "max-w-7xl mx-auto px-6 pt-12 pb-[80px]"
+          }`}
+      >
         {showSidebar && <SideMenu claims={claims} />}
-        
+
         <main className="w-full">
           <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-xl border border-slate-100 p-8">
-            <h2 className="text-3xl font-bold text-slate-900 text-center mb-8">Produtos</h2>
+            <h2 className="text-3xl font-bold text-slate-900 text-center mb-8">
+              Produtos
+            </h2>
 
             <div className="flex flex-wrap items-center justify-between gap-4 mb-8 bg-slate-50 p-4 rounded-2xl border border-slate-100">
               <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold text-slate-600">Filtrar por classe:</span>
+                <span className="text-sm font-semibold text-slate-600">
+                  Filtrar por classe:
+                </span>
                 <select
                   value={filterClass}
                   onChange={(e) => setFilterClass(e.target.value)}
@@ -370,8 +475,8 @@ export default function ProductsPage() {
                     {Object.values(cart).reduce((acc, n) => acc + n, 0)}
                   </strong>
                 </div>
-                <Link 
-                  href="/carrinho" 
+                <Link
+                  href="/carrinho"
                   className="inline-flex items-center justify-center px-6 py-2.5 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-bold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300"
                 >
                   Ver carrinho
@@ -380,7 +485,10 @@ export default function ProductsPage() {
             </div>
 
             {canEdit && (
-              <form onSubmit={handleSave} className="mb-10 bg-slate-50 rounded-2xl p-6 border border-slate-200 shadow-sm">
+              <form
+                onSubmit={handleSave}
+                className="mb-10 bg-slate-50 rounded-2xl p-6 border border-slate-200 shadow-sm"
+              >
                 <div className="flex flex-wrap gap-4 items-center justify-center">
                   <input
                     placeholder="Nome"
@@ -394,7 +502,9 @@ export default function ProductsPage() {
                     type="number"
                     step="0.01"
                     value={form.price}
-                    onChange={(e) => setForm({ ...form, price: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, price: e.target.value })
+                    }
                     required
                     className="w-32 px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
                   />
@@ -402,7 +512,9 @@ export default function ProductsPage() {
                     placeholder="Estoque"
                     type="number"
                     value={form.stock}
-                    onChange={(e) => setForm({ ...form, stock: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, stock: e.target.value })
+                    }
                     required
                     className="w-32 px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
                   />
@@ -415,27 +527,72 @@ export default function ProductsPage() {
                     className="flex-1 min-w-[200px] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
                   />
 
-                  <div className="relative group">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setImageFile(file);
-                          setImagePreview(URL.createObjectURL(file));
-                        } else {
-                          setImageFile(null);
-                          setImagePreview("");
-                        }
-                      }}
-                      className="block w-full text-xs text-slate-500
-                        file:mr-4 file:py-2 file:px-4
-                        file:rounded-full file:border-0
-                        file:text-xs file:font-semibold
-                        file:bg-emerald-50 file:text-emerald-700
-                        hover:file:bg-emerald-100 cursor-pointer"
-                    />
+                  <div className="relative group w-full flex flex-col gap-2">
+                    <div className="flex gap-2 items-end">
+                      <div className="flex-1">
+                        <label className="block text-xs font-semibold text-slate-500 mb-1 ml-2">
+                          Imagem do Produto
+                        </label>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setImageFile(file);
+                              setImagePreview(URL.createObjectURL(file));
+                            } else {
+                              setImageFile(null);
+                              setImagePreview("");
+                            }
+                          }}
+                          className="block w-full text-xs text-slate-500
+                            file:mr-4 file:py-2 file:px-4
+                            file:rounded-full file:border-0
+                            file:text-xs file:font-semibold
+                            file:bg-emerald-50 file:text-emerald-700
+                            hover:file:bg-emerald-100 cursor-pointer"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={startCamera}
+                        className="px-4 py-2 rounded-full bg-blue-50 text-blue-600 text-xs font-bold hover:bg-blue-100 transition-colors h-[34px] flex items-center gap-2"
+                      >
+                        <span>📷</span> Tirar foto
+                      </button>
+                    </div>
+
+                    {/* Camera Preview Area */}
+                    {showCamera && (
+                      <div className="mt-4 p-4 bg-slate-100 rounded-xl border border-slate-200 flex flex-col items-center gap-4">
+                        <div className="relative w-full max-w-sm aspect-video bg-black rounded-lg overflow-hidden">
+                          <video
+                            ref={videoRef}
+                            autoPlay
+                            playsInline
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <canvas ref={canvasRef} className="hidden" />
+                        <div className="flex gap-3">
+                          <button
+                            type="button"
+                            onClick={capturePhoto}
+                            className="px-6 py-2 rounded-full bg-emerald-600 text-white text-sm font-bold shadow-md hover:bg-emerald-700 transition-all"
+                          >
+                            Capturar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={stopCamera}
+                            className="px-6 py-2 rounded-full bg-slate-400 text-white text-sm font-bold hover:bg-slate-500 transition-all"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <button
@@ -458,6 +615,7 @@ export default function ProductsPage() {
                         });
                         setImageFile(null);
                         setImagePreview("");
+                        stopCamera();
                       }}
                       className="px-6 py-2.5 rounded-full bg-slate-400 text-white text-sm font-bold hover:bg-slate-500 transition-all duration-300"
                     >
@@ -468,7 +626,9 @@ export default function ProductsPage() {
 
                 {imagePreview && (
                   <div className="mt-4 text-center">
-                    <p className="text-xs text-slate-500 mb-2">Pré-visualização:</p>
+                    <p className="text-xs text-slate-500 mb-2">
+                      Pré-visualização:
+                    </p>
                     <img
                       src={imagePreview}
                       alt="Pré-visualização"
@@ -482,10 +642,12 @@ export default function ProductsPage() {
             {loading && (
               <div className="flex flex-col items-center justify-center py-20">
                 <div className="w-10 h-10 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mb-4"></div>
-                <p className="text-slate-500 font-medium">Carregando produtos...</p>
+                <p className="text-slate-500 font-medium">
+                  Carregando produtos...
+                </p>
               </div>
             )}
-            
+
             {err && (
               <div className="p-4 bg-red-50 text-red-600 rounded-xl text-center border border-red-100 mb-8">
                 {err}
@@ -494,13 +656,17 @@ export default function ProductsPage() {
 
             {!loading && !err && items.length === 0 && (
               <div className="text-center py-20 bg-slate-50 rounded-2xl border border-slate-100 border-dashed">
-                <p className="text-slate-500 text-lg">Nenhum produto cadastrado ainda.</p>
+                <p className="text-slate-500 text-lg">
+                  Nenhum produto cadastrado ainda.
+                </p>
               </div>
             )}
 
             {!loading && !err && items.length > 0 && filteredItems.length === 0 && (
               <div className="text-center py-20 bg-slate-50 rounded-2xl border border-slate-100 border-dashed">
-                <p className="text-slate-500 text-lg">Nenhum produto encontrado nesta categoria.</p>
+                <p className="text-slate-500 text-lg">
+                  Nenhum produto encontrado nesta categoria.
+                </p>
               </div>
             )}
 
@@ -520,11 +686,12 @@ export default function ProductsPage() {
                   const available =
                     stockNumber !== null ? stockNumber - qtyInCart : null;
                   const isOutOfStock =
-                    stockNumber !== null && (stockNumber <= 0 || available <= 0);
+                    stockNumber !== null &&
+                    (stockNumber <= 0 || available <= 0);
 
                   return (
-                    <div 
-                      key={p.id} 
+                    <div
+                      key={p.id}
                       className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden"
                     >
                       <div className="relative w-full pt-[75%] bg-slate-50 overflow-hidden">
@@ -539,13 +706,14 @@ export default function ProductsPage() {
                             Sem imagem
                           </div>
                         )}
-                        
+
                         <div className="absolute top-3 right-3 z-10">
-                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm ${
-                            p.active === false 
-                              ? "bg-red-100 text-red-700 border border-red-200" 
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm ${p.active === false
+                              ? "bg-red-100 text-red-700 border border-red-200"
                               : "bg-emerald-100 text-emerald-700 border border-emerald-200"
-                          }`}>
+                              }`}
+                          >
                             {p.active === false ? "Inativo" : "Ativo"}
                           </span>
                         </div>
@@ -567,7 +735,20 @@ export default function ProductsPage() {
                             className="absolute bottom-3 right-3 bg-emerald-600 hover:bg-emerald-700 text-white w-10 h-10 rounded-full grid place-items-center shadow-lg transition-transform active:scale-90 z-10"
                             title="Adicionar 1 unidade"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="20"
+                              height="20"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="3"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <line x1="12" y1="5" x2="12" y2="19"></line>
+                              <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
                           </button>
                         )}
                       </div>
@@ -575,7 +756,10 @@ export default function ProductsPage() {
                       <div className="p-5 flex flex-col gap-4 flex-1">
                         <div>
                           <div className="flex justify-between items-start gap-2 mb-1">
-                            <h3 className="font-bold text-slate-900 text-base leading-tight line-clamp-2" title={p.name || p.title}>
+                            <h3
+                              className="font-bold text-slate-900 text-base leading-tight line-clamp-2"
+                              title={p.name || p.title}
+                            >
                               {p.name || p.title}
                             </h3>
                           </div>
@@ -586,22 +770,36 @@ export default function ProductsPage() {
 
                         <div className="flex items-end justify-between mt-auto pt-2 border-t border-slate-50">
                           <div>
-                            <p className="text-xs text-slate-500 mb-0.5">Preço</p>
+                            <p className="text-xs text-slate-500 mb-0.5">
+                              Preço
+                            </p>
                             <p className="text-xl font-extrabold text-emerald-600">
                               {price !== null ? `R$ ${price.toFixed(2)}` : "—"}
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-xs text-slate-500 mb-0.5">Estoque</p>
-                            <p className={`text-sm font-bold ${stockNumber !== null && stockNumber > 0 ? "text-slate-700" : "text-red-500"}`}>
-                              {stockNumber !== null ? `${stockNumber} un.` : "N/A"}
+                            <p className="text-xs text-slate-500 mb-0.5">
+                              Estoque
+                            </p>
+                            <p
+                              className={`text-sm font-bold ${stockNumber !== null && stockNumber > 0
+                                ? "text-slate-700"
+                                : "text-red-500"
+                                }`}
+                            >
+                              {stockNumber !== null
+                                ? `${stockNumber} un.`
+                                : "N/A"}
                             </p>
                           </div>
                         </div>
 
                         <div className="flex flex-col gap-3 mt-2">
                           {isOutOfStock ? (
-                            <button disabled className="w-full py-2.5 rounded-xl bg-slate-200 text-slate-500 font-bold text-sm cursor-not-allowed">
+                            <button
+                              disabled
+                              className="w-full py-2.5 rounded-xl bg-slate-200 text-slate-500 font-bold text-sm cursor-not-allowed"
+                            >
                               Esgotado
                             </button>
                           ) : (
@@ -636,14 +834,17 @@ export default function ProductsPage() {
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleQuickAdd(p);
-                                    showModal("Produto adicionado ao carrinho!", "Sucesso");
+                                    showModal(
+                                      "Produto adicionado ao carrinho!",
+                                      "Sucesso"
+                                    );
                                   }}
                                   className="py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-sm hover:bg-slate-50 hover:border-slate-300 transition-colors"
                                 >
                                   + Carrinho
                                 </button>
                               )}
-                              
+
                               <button
                                 type="button"
                                 onClick={() => addToCart(p)}
@@ -668,7 +869,10 @@ export default function ProductsPage() {
                                   });
                                   setImageFile(null);
                                   setImagePreview(p.imageUrl || "");
-                                  window.scrollTo({ top: 0, behavior: "smooth" });
+                                  window.scrollTo({
+                                    top: 0,
+                                    behavior: "smooth",
+                                  });
                                 }}
                                 className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 text-xs font-bold hover:bg-blue-100 transition-colors"
                               >

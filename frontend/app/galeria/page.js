@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import Nav from "../../components/Nav";
+import SideMenu from "../../components/SideMenu";
 import { auth, db, storage } from "../../lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import {
@@ -15,31 +16,31 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function GaleriaPage() {
-  const [items, setItems] = useState([]); 
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
-  // permissões
   const [user, setUser] = useState(null);
   const [claims, setClaims] = useState(null);
   const [authReady, setAuthReady] = useState(false);
 
-  // filtro simples
   const [filterCategory, setFilterCategory] = useState("todos");
 
-  // modal de zoom
   const [zoomItem, setZoomItem] = useState(null);
 
-  // upload
   const [form, setForm] = useState({
     title: "",
     description: "",
     category: "Eventos",
   });
+
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
 
-  //OBSERVA AUTH E PEGA CLAIMS
+  const [showCamera, setShowCamera] = useState(false);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       setUser(u || null);
@@ -60,7 +61,6 @@ export default function GaleriaPage() {
   const canEvents = claims?.canEditEvents === true;
   const canEditGallery = isAdmin || (isColab && canEvents);
 
-  //CARREGA FOTOS DA GALERIA (FIRESTORE)
   useEffect(() => {
     try {
       const colRef = collection(db, "gallery");
@@ -85,8 +85,7 @@ export default function GaleriaPage() {
           setItems(list);
           setLoading(false);
         },
-        (e) => {
-          console.error("[galeria] erro ao ouvir coleção:", e);
+        () => {
           setErr("Não foi possível carregar a galeria.");
           setLoading(false);
         }
@@ -94,13 +93,11 @@ export default function GaleriaPage() {
 
       return () => unsub();
     } catch (e) {
-      console.error("[galeria] erro geral:", e);
       setErr("Falha ao conectar à galeria.");
       setLoading(false);
     }
   }, []);
 
-  //CATEGORIAS FIXAS
   const CATEGORY_OPTIONS = [
     "Eventos",
     "Estrutura",
@@ -123,7 +120,90 @@ export default function GaleriaPage() {
     return items.filter((it) => it.category === filterCategory);
   }, [items, filterCategory]);
 
-  //UPLOAD SIMPLES
+  useEffect(() => {
+    if (!showCamera) return;
+
+    const startCamera = async () => {
+      try {
+        const video = videoRef.current;
+        if (!video) return;
+
+        let stream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: "environment" } },
+          });
+        } catch (e) {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+          });
+        }
+
+        video.srcObject = stream;
+
+        await new Promise((resolve) => {
+          video.onloadedmetadata = () => {
+            video.play().then(resolve);
+          };
+        });
+
+        await new Promise((r) => setTimeout(r, 200));
+
+        if (video.videoWidth === 0 || video.videoHeight === 0) {
+          alert("A câmera não iniciou corretamente. Tente novamente.");
+          stopStream();
+          setShowCamera(false);
+        }
+      } catch {
+        alert("Não foi possível acessar a câmera.");
+        setShowCamera(false);
+      }
+    };
+
+    startCamera();
+  }, [showCamera]);
+
+  const stopStream = () => {
+    const video = videoRef.current;
+    if (video && video.srcObject) {
+      video.srcObject.getTracks().forEach((t) => t.stop());
+    }
+  };
+
+  const capturePhoto = () => {
+    const video = videoRef.current;
+    const canvas = document.createElement("canvas");
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          alert("Falha ao processar imagem.");
+          return;
+        }
+
+        const photoFile = new File([blob], "foto.jpg", {
+          type: "image/jpeg",
+        });
+
+        setFile(photoFile);
+        stopStream();
+        setShowCamera(false);
+      },
+      "image/jpeg",
+      0.7
+    );
+  };
+
+  const handleCloseCamera = () => {
+    stopStream();
+    setShowCamera(false);
+  };
   async function handleUpload(e) {
     e.preventDefault();
     setErr("");
@@ -134,25 +214,22 @@ export default function GaleriaPage() {
     }
 
     if (!file) {
-      setErr("Selecione uma imagem para enviar.");
+      setErr("Selecione ou capture uma imagem.");
       return;
     }
 
     if (!form.title.trim()) {
-      setErr("Informe um título para a foto.");
+      setErr("Informe um título.");
       return;
     }
 
     try {
       setUploading(true);
-
-      //Faz o upload do arquivo
       const fileName = `${Date.now()}-${file.name}`;
       const storageRef = ref(storage, `gallery/${fileName}`);
       await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(storageRef);
 
-      //Salva no Firestore
       const colRef = collection(db, "gallery");
       await addDoc(colRef, {
         title: form.title.trim(),
@@ -162,78 +239,90 @@ export default function GaleriaPage() {
         createdAt: serverTimestamp(),
       });
 
-      //Limpa formulário
       setForm({
         title: "",
         description: "",
-        category: form.category, 
+        category: form.category,
       });
       setFile(null);
-      (e.target.reset && e.target.reset()); 
-    } catch (error) {
-      console.error("[galeria] erro ao enviar imagem:", error);
-      setErr("Não foi possível enviar a imagem. Tente novamente.");
+      e.target.reset && e.target.reset();
+    } catch {
+      setErr("Erro ao enviar imagem.");
     } finally {
       setUploading(false);
     }
   }
 
-  //ESTILOS
   const page = {
     minHeight: "calc(100svh - 56px)",
+    padding: "16px 16px 80px 16px",
+    display: "grid",
+    gridTemplateColumns: "260px 1fr",
+    gap: 16,
+    maxWidth: 1120,
+    margin: "0 auto",
     background: "#e6f3ff",
-    padding: 16,
   };
 
-  const wrap = {
-    maxWidth: 1100,
-    margin: "0 auto",
+  const panelBase = {
+    border: "1px solid #e5e7eb",
+    borderRadius: 12,
+    padding: 12,
+    background: "#ffffff",
+    minHeight: 0,
+    display: "grid",
+    gridTemplateRows: "auto 1fr",
+    gap: 8,
+  };
+
+  const mainPanel = {
+    ...panelBase,
+    overflow: "hidden",
   };
 
   const title = {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: 700,
     color: "#0f172a",
-    margin: "12px 0 4px 0",
+    marginBottom: 6,
   };
 
   const subtitle = {
     fontSize: 14,
-    color: "#4b5563",
+    color: "#475569",
     marginBottom: 16,
   };
 
   const errorBox = {
     background: "#fef2f2",
-    borderRadius: 10,
+    borderRadius: 8,
     border: "1px solid #fecaca",
-    padding: "8px 10px",
     color: "#991b1b",
-    fontSize: 14,
+    padding: 10,
+    fontSize: 13,
     marginBottom: 12,
   };
 
-  const uploadCard = {
-    background: "#ffffff",
-    borderRadius: 18,
-    border: "1px solid #e5e7eb",
+  const uploadSection = {
+    background: "#f8fafc",
+    borderRadius: 12,
+    border: "1px solid #e2e8f0",
     padding: 16,
-    boxShadow: "0 10px 22px rgba(15,23,42,0.08)",
-    marginBottom: 16,
+    marginBottom: 24,
   };
 
-  const uploadTitle = {
+  const sectionTitle = {
     fontSize: 16,
-    fontWeight: 700,
+    fontWeight: 600,
     color: "#0f172a",
-    marginBottom: 8,
+    marginBottom: 12,
   };
 
   const fieldRow = {
     display: "grid",
-    gridTemplateColumns: "1.4fr 1fr",
-    gap: 10,
-    marginBottom: 8,
+    gridTemplateColumns: "1fr 1fr",
+    gap: 12,
+    marginBottom: 12,
   };
 
   const label = {
@@ -246,16 +335,17 @@ export default function GaleriaPage() {
 
   const input = {
     width: "100%",
-    borderRadius: 10,
-    border: "1px solid #d1d5db",
-    padding: "8px 10px",
+    borderRadius: 8,
+    border: "1px solid #cbd5e1",
+    padding: "8px 12px",
     fontSize: 14,
     outline: "none",
+    background: "#ffffff",
   };
 
   const textarea = {
     ...input,
-    minHeight: 60,
+    minHeight: 80,
     resize: "vertical",
   };
 
@@ -266,253 +356,277 @@ export default function GaleriaPage() {
   const fileInput = {
     width: "100%",
     fontSize: 13,
+    marginTop: 4,
   };
 
   const uploadBtn = {
-    marginTop: 8,
-    padding: "10px 16px",
+    marginTop: 12,
+    padding: "10px 20px",
     borderRadius: 999,
     border: "none",
     cursor: uploading ? "not-allowed" : "pointer",
-    fontWeight: 700,
+    fontWeight: 600,
     fontSize: 14,
-    background: "linear-gradient(135deg, #22c55e, #16a34a)",
+    background: "#16a34a",
     color: "#ffffff",
-    boxShadow: "0 8px 18px rgba(34,197,94,0.35)",
-    opacity: uploading ? 0.75 : 1,
+    opacity: uploading ? 0.7 : 1,
+  };
+
+  const cameraBtn = {
+    marginTop: 12,
+    marginLeft: 12,
+    padding: "10px 20px",
+    borderRadius: 999,
+    border: "none",
+    cursor: "pointer",
+    fontWeight: 600,
+    fontSize: 14,
+    background: "#2563eb",
+    color: "#ffffff",
   };
 
   const galleryHeader = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
-    marginTop: 8,
-    marginBottom: 8,
     flexWrap: "wrap",
+    gap: 12,
+    marginBottom: 16,
   };
 
   const filterSelect = {
     borderRadius: 999,
-    border: "1px solid #cbd5f5",
-    padding: "6px 12px",
+    border: "1px solid #cbd5e1",
+    padding: "6px 16px",
     fontSize: 13,
     background: "#ffffff",
+    cursor: "pointer",
   };
 
   const grid = {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
-    gap: 12,
-    marginTop: 8,
+    gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+    gap: 16,
   };
 
   const card = {
     background: "#ffffff",
-    borderRadius: 14,
+    borderRadius: 12,
     overflow: "hidden",
     border: "1px solid #e5e7eb",
-    boxShadow: "0 8px 18px rgba(15,23,42,0.06)",
+    boxShadow: "0 4px 6px rgba(15,23,42,0.05)",
     cursor: "pointer",
     display: "flex",
     flexDirection: "column",
+    transition: "transform 0.2s",
   };
 
   const imgBox = {
     width: "100%",
-    height: 140,
+    height: 160,
     objectFit: "cover",
     display: "block",
+    background: "#f1f5f9",
   };
 
   const cardBody = {
-    padding: 8,
+    padding: 12,
   };
 
-  const cardTitle = {
+  const cardTitleStyle = {
     fontSize: 14,
     fontWeight: 600,
-    color: "#111827",
-    marginBottom: 2,
+    color: "#0f172a",
+    marginBottom: 4,
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   };
 
   const cardCat = {
     fontSize: 11,
     color: "#0f766e",
     textTransform: "uppercase",
+    fontWeight: 600,
   };
 
   const empty = {
+    textAlign: "center",
+    padding: 24,
+    color: "#64748b",
     fontSize: 14,
-    color: "#6b7280",
-    marginTop: 12,
+    background: "#f8fafc",
+    borderRadius: 12,
+    border: "1px dashed #cbd5e1",
   };
 
-  // Modal do zoom
   const modalBackdrop = {
     position: "fixed",
     inset: 0,
-    background: "rgba(15,23,42,0.75)",
+    background: "rgba(15,23,42,0.8)",
     display: "grid",
     placeItems: "center",
-    zIndex: 60,
+    zIndex: 9999,
     padding: 16,
   };
 
   const modalBox = {
     background: "#ffffff",
-    borderRadius: 20,
+    borderRadius: 16,
     maxWidth: 900,
     width: "100%",
     maxHeight: "90vh",
     overflow: "hidden",
-    boxShadow: "0 20px 50px rgba(15,23,42,0.7)",
+    boxShadow:
+      "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
     display: "grid",
-    gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)",
-    gap: 0,
+    gridTemplateColumns: "minmax(0, 1.5fr) minmax(0, 1fr)",
   };
 
   const modalImgWrap = {
-    background: "#020617",
+    background: "#0f172a",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   };
 
   const modalImg = {
     width: "100%",
     height: "100%",
     maxHeight: "90vh",
-    objectFit: "cover",
-    display: "block",
+    objectFit: "contain",
   };
 
   const modalContent = {
-    padding: 18,
+    padding: 24,
     display: "flex",
     flexDirection: "column",
-    gap: 8,
+    gap: 12,
+    overflowY: "auto",
   };
 
   const modalClose = {
     alignSelf: "flex-end",
     border: "none",
     background: "transparent",
-    fontSize: 20,
+    fontSize: 24,
     cursor: "pointer",
+    color: "#64748b",
+    lineHeight: 1,
   };
 
-  const modalTitle = {
-    fontSize: 18,
+  const modalTitleStyle = {
+    fontSize: 20,
     fontWeight: 700,
     color: "#0f172a",
   };
 
   const modalDesc = {
     fontSize: 14,
-    color: "#4b5563",
+    color: "#475569",
+    lineHeight: 1.6,
   };
-
-  //RENDER
   return (
     <>
       <Nav />
       <main style={page}>
-        <div style={wrap}>
-          <h1 style={title}>Galeria de fotos</h1>
-          <p style={subtitle}>
-            Veja registros de eventos, atividades pedagógicas e momentos
-            especiais da APAE – Pinhão.
-          </p>
+        <SideMenu claims={claims} />
 
-          {err && <div style={errorBox}>{err}</div>}
+        <section style={mainPanel}>
+          <div>
+            <h1 style={title}>Galeria de fotos</h1>
+            <p style={subtitle}>
+              Veja registros de eventos, atividades pedagógicas e momentos especiais da APAE – Pinhão.
+            </p>
 
-          {/* UPLOAD  */}
-          {authReady && canEditGallery && (
-            <section style={uploadCard}>
-              <div style={uploadTitle}>Adicionar foto à galeria</div>
-              <form onSubmit={handleUpload}>
-                <div style={fieldRow}>
-                  <div>
-                    <label style={label} htmlFor="title">
-                      Título da foto
-                    </label>
-                    <input
-                      id="title"
-                      style={input}
-                      type="text"
-                      value={form.title}
+            {err && <div style={errorBox}>{err}</div>}
+
+            {authReady && canEditGallery && (
+              <div style={uploadSection}>
+                <h3 style={sectionTitle}>Adicionar nova foto</h3>
+
+                <form onSubmit={handleUpload}>
+                  <div style={fieldRow}>
+                    <div>
+                      <label style={label}>Título da foto</label>
+                      <input
+                        style={input}
+                        type="text"
+                        value={form.title}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, title: e.target.value }))
+                        }
+                        placeholder="Ex.: Festa Junina"
+                      />
+                    </div>
+
+                    <div>
+                      <label style={label}>Categoria</label>
+                      <select
+                        style={select}
+                        value={form.category}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, category: e.target.value }))
+                        }
+                      >
+                        {CATEGORY_OPTIONS.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={label}>Descrição (opcional)</label>
+                    <textarea
+                      style={textarea}
+                      value={form.description}
                       onChange={(e) =>
-                        setForm((f) => ({ ...f, title: e.target.value }))
+                        setForm((f) => ({ ...f, description: e.target.value }))
                       }
-                      placeholder="Ex.: Apresentação na Semana da Pessoa com Deficiência"
+                      placeholder="Detalhes sobre a foto..."
                     />
                   </div>
-                  <div>
-                    <label style={label} htmlFor="category">
-                      Categoria
-                    </label>
-                    <select
-                      id="category"
-                      style={select}
-                      value={form.category}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, category: e.target.value }))
-                      }
-                    >
-                      {CATEGORY_OPTIONS.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                    </select>
+
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={label}>Imagem</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={fileInput}
+                      onChange={(e) => setFile(e.target.files?.[0] || null)}
+                    />
                   </div>
-                </div>
 
-                <label style={label} htmlFor="description">
-                  Descrição (opcional)
-                </label>
-                <textarea
-                  id="description"
-                  style={textarea}
-                  value={form.description}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, description: e.target.value }))
-                  }
-                  placeholder="Breve descrição do momento registrado na foto."
-                />
+                  <div style={{ display: "flex", alignItems: "center" }}>
+                    <button type="submit" style={uploadBtn} disabled={uploading}>
+                      {uploading ? "Enviando..." : "Enviar foto"}
+                    </button>
 
-                <label style={label} htmlFor="file">
-                  Imagem (upload direto do computador)
-                </label>
-                <input
-                  id="file"
-                  type="file"
-                  accept="image/*"
-                  style={fileInput}
-                  onChange={(e) => setFile(e.target.files?.[0] || null)}
-                />
+                    <button
+                      type="button"
+                      style={cameraBtn}
+                      onClick={() => setShowCamera(true)}
+                    >
+                      Tirar foto
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
 
-                <button type="submit" style={uploadBtn} disabled={uploading}>
-                  {uploading ? "Enviando foto..." : "Enviar para a galeria"}
-                </button>
-              </form>
-            </section>
-          )}
-
-          {/* LISTA GALERIA */}
-          <section>
             <div style={galleryHeader}>
-              <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a" }}>
-                Fotos cadastradas
-              </h2>
+              <h2 style={{ ...sectionTitle, marginBottom: 0 }}>Fotos cadastradas</h2>
 
               <div>
                 <label
-                  htmlFor="filter"
-                  style={{ fontSize: 12, color: "#4b5563", marginRight: 6 }}
+                  style={{ fontSize: 13, color: "#64748b", marginRight: 8 }}
                 >
-                  Filtrar por categoria:
+                  Filtrar:
                 </label>
                 <select
-                  id="filter"
                   style={filterSelect}
                   value={filterCategory}
                   onChange={(e) => setFilterCategory(e.target.value)}
@@ -528,11 +642,9 @@ export default function GaleriaPage() {
             </div>
 
             {loading ? (
-              <p style={empty}>Carregando fotos...</p>
+              <div style={empty}>Carregando fotos...</div>
             ) : filteredItems.length === 0 ? (
-              <p style={empty}>
-                Nenhuma foto cadastrada nesta categoria até o momento.
-              </p>
+              <div style={empty}>Nenhuma foto encontrada.</div>
             ) : (
               <div style={grid}>
                 {filteredItems.map((it) => (
@@ -542,78 +654,137 @@ export default function GaleriaPage() {
                     onClick={() => it.imageUrl && setZoomItem(it)}
                   >
                     {it.imageUrl ? (
-                      <img
-                        src={it.imageUrl}
-                        alt={it.title || "Foto da galeria"}
-                        style={imgBox}
-                      />
+                      <img src={it.imageUrl} alt={it.title} style={imgBox} />
                     ) : (
                       <div
                         style={{
                           ...imgBox,
                           display: "grid",
                           placeItems: "center",
-                          color: "#9ca3af",
+                          color: "#94a3b8",
                           fontSize: 12,
                         }}
                       >
                         Sem imagem
                       </div>
                     )}
+
                     <div style={cardBody}>
-                      <div style={cardTitle}>{it.title || "Foto"}</div>
-                      <div style={cardCat}>{it.category || "Outros"}</div>
+                      <div style={cardTitleStyle} title={it.title}>
+                        {it.title || "Sem título"}
+                      </div>
+                      <div style={cardCat}>{it.category || "Geral"}</div>
                     </div>
                   </article>
                 ))}
               </div>
             )}
-          </section>
-        </div>
+          </div>
+        </section>
 
-        {/* MODAL DE ZOOM DA IMAGEM */}
         {zoomItem && (
-          <div
-            style={modalBackdrop}
-            onClick={() => setZoomItem(null)}
-          >
-            <div
-              style={modalBox}
-              onClick={(e) => e.stopPropagation()}
-            >
+          <div style={modalBackdrop} onClick={() => setZoomItem(null)}>
+            <div style={modalBox} onClick={(e) => e.stopPropagation()}>
               <div style={modalImgWrap}>
-                {zoomItem.imageUrl && (
-                  <img
-                    src={zoomItem.imageUrl}
-                    alt={zoomItem.title || "Foto ampliada"}
-                    style={modalImg}
-                  />
-                )}
+                <img
+                  src={zoomItem.imageUrl}
+                  alt={zoomItem.title}
+                  style={modalImg}
+                />
               </div>
+
               <div style={modalContent}>
                 <button
                   type="button"
                   style={modalClose}
                   onClick={() => setZoomItem(null)}
-                  aria-label="Fechar"
                 >
                   ×
                 </button>
-                <h3 style={modalTitle}>{zoomItem.title || "Foto"}</h3>
-                {zoomItem.category && (
-                  <span
-                    style={{
-                      fontSize: 11,
-                      textTransform: "uppercase",
-                      color: "#0f766e",
-                    }}
-                  >
-                    {zoomItem.category}
-                  </span>
-                )}
+
+                <div>
+                  <h3 style={modalTitleStyle}>{zoomItem.title}</h3>
+
+                  {zoomItem.category && (
+                    <span
+                      style={{
+                        fontSize: 12,
+                        textTransform: "uppercase",
+                        color: "#0f766e",
+                        fontWeight: 600,
+                        marginTop: 4,
+                        display: "block",
+                      }}
+                    >
+                      {zoomItem.category}
+                    </span>
+                  )}
+                </div>
+
                 {zoomItem.description && (
                   <p style={modalDesc}>{zoomItem.description}</p>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showCamera && (
+          <div style={modalBackdrop}>
+            <div
+              style={{
+                background: "#ffffff",
+                borderRadius: 16,
+                width: "100%",
+                maxWidth: 500,
+                padding: 20,
+                display: "flex",
+                flexDirection: "column",
+                gap: 16,
+              }}
+            >
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                style={{
+                  width: "100%",
+                  borderRadius: 12,
+                  background: "#000",
+                }}
+              />
+
+              <canvas ref={canvasRef} style={{ display: "none" }} />
+
+              <div style={{ display: "flex", gap: 12 }}>
+                <button
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    background: "#2563eb",
+                    color: "#fff",
+                    borderRadius: 8,
+                    border: "none",
+                    fontWeight: 600,
+                  }}
+                  onClick={capturePhoto}
+                >
+                  Capturar
+                </button>
+
+                <button
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    background: "#aaa",
+                    color: "#fff",
+                    borderRadius: 8,
+                    border: "none",
+                  }}
+                  onClick={handleCloseCamera}
+                >
+                  Cancelar
+                </button>
               </div>
             </div>
           </div>
