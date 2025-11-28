@@ -43,197 +43,78 @@ export default function ForgotPasswordPage() {
       setSending(false);
     }
   }
-//estilos
-  const page = {
-    minHeight: "calc(100svh - 56px)",
-    display: "grid",
-    placeItems: "center",
-    padding: 16,
-    background: "#e6f3ff", 
-  };
-
-  const card = {
-    background: "#ffffff",
-    border: "1px solid #e5e7eb",
-    borderRadius: 20,
-    padding: 24,
-    boxShadow: "0 12px 28px rgba(2, 8, 20, 0.06)",
-    width: "100%",
-    maxWidth: 420,
-  };
-
-  const header = { textAlign: "center", marginBottom: 18 };
-
-  const logoWrap = {
-    width: 80,
-    height: 80,
-    borderRadius: "999px",
-    overflow: "hidden",
-    margin: "0 auto 10px auto",
-    border: "2px solid rgba(248,250,252,0.9)",
-    boxShadow: "0 6px 16px rgba(15,23,42,0.25)",
-    background: "#fff",
-  };
-
-  const logoImg = {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-  };
-
-  const title = {
-    fontSize: 24,
-    lineHeight: 1.2,
-    color: "#0f172a",
-    margin: 0,
-    fontWeight: 700,
-  };
-
-  const subtitle = { marginTop: 6, fontSize: 14, color: "#475569" };
-
-  const label = {
-    display: "block",
-    fontSize: 13,
-    color: "#334155",
-    marginBottom: 6,
-    fontWeight: 600,
-  };
-
-  const input = {
-    display: "block",
-    width: "100%",
-    padding: "20px 22px",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderColor: "#e5e7eb",
-    background: "#ffffff",
-    color: "#111827",
-    outline: "none",
-    transition: "box-shadow 120ms, border-color 120ms",
-    marginBottom: 12,
-  };
-
-  const inputFocus = {
-    boxShadow: "0 0 0 4px rgba(34,197,94,0.15)",
-    borderColor: "#22C55E",
-  };
-
-  const btn = {
-    padding: "12px 16px",
-    background: "linear-gradient(180deg, #22C55E 0%, #16A34A 100%)",
-    color: "#ffffff",
-    borderRadius: 999,
-    border: "none",
-    fontWeight: 700,
-    cursor: "pointer",
-    width: "100%",
-    boxShadow: "0 6px 14px rgba(22,163,74,0.25)",
-    transition: "transform 80ms ease, filter 80ms ease, opacity 120ms ease",
-    marginTop: 4,
-  };
-
-  const btnDisabled = {
-    opacity: 0.75,
-    cursor: "not-allowed",
-    filter: "grayscale(10%)",
-  };
-
-  const errorBox = {
-    background: "#FEF2F2",
-    color: "#991B1B",
-    border: "1px solid #FECACA",
-    borderRadius: 10,
-    padding: "10px 12px",
-    margin: "8px 0 0 0",
-    fontSize: 14,
-  };
-
-  const successBox = {
-    background: "#ECFDF5",
-    color: "#065F46",
-    border: "1px solid #A7F3D0",
-    borderRadius: 10,
-    padding: "10px 12px",
-    margin: "8px 0 0 0",
-    fontSize: 14,
-  };
-
-  const helper = {
-    fontSize: 12,
-    color: "#6B7280",
-    textAlign: "center",
-    marginTop: 12,
-  };
-
-  const linkBack = {
-    display: "inline-block",
-    marginTop: 12,
-    fontSize: 13,
-    fontWeight: 600,
-    color: "#0f172a",
-    textDecoration: "none",
-    padding: "6px 10px",
-    borderRadius: 999,
-    background: "#E5F9FF",
-    border: "1px solid #7DD3FC",
-  };
-
   return (
     <>
       <Nav />
-      <main style={page}>
-        <form onSubmit={handleSubmit} style={card}>
-          <div style={header}>
-            <div style={logoWrap}>
-              <img
-                src="/images/logo7.jpg"
-                alt="Logo APAE Pinhão"
-                style={logoImg}
-              />
-            </div>
-            <h1 style={title}>Redefinir senha</h1>
-            <p style={subtitle}>
-              Informe seu e-mail para receber o link de redefinição.
-            </p>
+      <main className="min-h-screen grid place-items-center px-4 pt-4 bg-gradient-to-br from-blue-50 to-blue-100">
+        <form 
+          onSubmit={handleSubmit} 
+          className="bg-white border border-slate-200 rounded-3xl p-8 shadow-2xl w-full max-w-md animate-fade-in"
+        >
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold text-slate-900 mb-2">Redefinir senha</h1>
+            <p className="text-sm text-slate-500">Informe seu e-mail para receber o link de redefinição.</p>
           </div>
 
-          <label style={label} htmlFor="email">
-            E-mail
-          </label>
-          <input
-            id="email"
-            type="email"
-            placeholder="seuemail@exemplo.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={{ ...input, ...(focus.email ? inputFocus : null) }}
-            onFocus={() => setFocus({ email: true })}
-            onBlur={() => setFocus({ email: false })}
-            required
-            autoComplete="email"
-          />
+          <div className="mb-6">
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2" htmlFor="email">
+              E-mail
+            </label>
+            <input
+              id="email"
+              type="email"
+              className="w-full px-5 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              placeholder="seuemail@exemplo.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onFocus={() => setFocus({ email: true })}
+              onBlur={() => setFocus({ email: false })}
+              required
+              autoComplete="email"
+            />
+          </div>
 
-          <button
-            type="submit"
-            style={{ ...btn, ...(sending ? btnDisabled : null) }}
-            disabled={sending}
-          >
-            {sending ? "Enviando..." : "Enviar link de redefinição"}
-          </button>
+          <div className="flex flex-col gap-4">
+            <button
+              type="submit"
+              disabled={sending}
+              className="w-full py-3.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-y-0"
+            >
+              {sending ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                  Enviando...
+                </span>
+              ) : (
+                "Enviar link de redefinição"
+              )}
+            </button>
 
-          {msg && <div style={successBox}>{msg}</div>}
-          {err && <div style={errorBox}>{err}</div>}
+            {msg && (
+              <div className="bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl p-3 text-sm font-medium text-center">
+                {msg}
+              </div>
+            )}
+            
+            {err && (
+              <div className="bg-red-50 text-red-700 border border-red-200 rounded-xl p-3 text-sm font-medium text-center">
+                {err}
+              </div>
+            )}
 
-          <p style={helper}>
-            Você receberá um e-mail com um link para criar uma nova senha. Caso
-            não encontre, verifique também a pasta de Spam.
-          </p>
+            <p className="text-xs text-center text-slate-400 leading-relaxed">
+              Você receberá um e-mail com um link para criar uma nova senha. Caso
+              não encontre, verifique também a pasta de Spam.
+            </p>
 
-          <div style={{ textAlign: "center" }}>
-            <Link href="/login" style={linkBack}>
-              Voltar para o login
-            </Link>
+            <div className="text-center mt-2">
+              <Link 
+                href="/login" 
+                className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-blue-50 text-blue-600 text-sm font-bold border border-blue-200 hover:bg-blue-100 transition-all"
+              >
+                Voltar para o login
+              </Link>
+            </div>
           </div>
         </form>
       </main>

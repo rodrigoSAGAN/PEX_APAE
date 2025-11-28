@@ -332,406 +332,103 @@ export default function CartPage() {
 
   const pixTicketUrl = pixData?.ticket_url || pixData?.ticketUrl || "";
 
-  const page = {
-    minHeight: "calc(100svh - 56px)",
-    padding: 16,
-    maxWidth: 960,
-    margin: "0 auto",
-    background: "#e6f3ff",
-  };
-
-  const h2 = {
-    textAlign: "center",
-    margin: "12px 0 16px 0",
-    color: "#111827",
-    fontSize: 26,
-  };
-  const note = {
-    fontSize: 12,
-    color: "#6b7280",
-    textAlign: "center",
-    marginTop: 10,
-  };
-
-  const card = {
-    borderRadius: 16,
-    border: "1px solid #e5e7eb",
-    background: "#ffffff",
-    boxShadow: "0 8px 22px rgba(15,23,42,0.06)",
-    padding: 16,
-  };
-
-  const tableWrap = {
-    borderRadius: 12,
-    overflow: "hidden",
-    border: "1px solid #e5e7eb",
-  };
-
-  const table = {
-    width: "100%",
-    borderCollapse: "separate",
-    borderSpacing: 0,
-  };
-
-  const th = {
-    textAlign: "left",
-    padding: "10px 12px",
-    background: "#f3f4f6",
-    color: "#111827",
-    fontWeight: 700,
-    borderBottom: "1px solid #e5e7eb",
-    fontSize: 14,
-  };
-
-  const td = {
-    padding: "10px 12px",
-    borderBottom: "1px solid #f1f5f9",
-    color: "#4b5563",
-    fontSize: 14,
-    verticalAlign: "middle",
-  };
-
-  const rowAlt = { background: "#f9fafb" };
-
-  const imgBox = {
-    width: 56,
-    height: 42,
-    borderRadius: 8,
-    objectFit: "cover",
-    border: "1px solid #e5e7eb",
-  };
-
-  const totalBox = {
-    marginTop: 16,
-    paddingTop: 12,
-    borderTop: "1px dashed #e5e7eb",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
-    flexWrap: "wrap",
-  };
-
-  const totalLabel = {
-    fontSize: 15,
-    color: "#374151",
-    marginRight: 8,
-  };
-
-  const totalValue = {
-    fontSize: 18,
-    fontWeight: 800,
-    color: "#16a34a",
-  };
-
-  const empty = {
-    textAlign: "center",
-    color: "#6b7280",
-    padding: 24,
-  };
-
-  const errorBox = {
-    background: "#fef2f2",
-    borderRadius: 8,
-    border: "1px solid #fecaca",
-    color: "#991b1b",
-    padding: "10px 12px",
-    marginBottom: 12,
-    fontSize: 14,
-  };
-
-  const btnRemove = {
-    background: "#dc2626",
-    color: "#fff",
-    border: "none",
-    borderRadius: 6,
-    padding: "4px 10px",
-    cursor: "pointer",
-    fontSize: 13,
-    fontWeight: 600,
-  };
-
-  const payBtn = {
-    padding: "10px 18px",
-    borderRadius: 999,
-    border: "none",
-    cursor: submitting ? "not-allowed" : "pointer",
-    fontWeight: 700,
-    fontSize: 14,
-    background: "linear-gradient(135deg, #22c55e, #10b981)",
-    color: "#ffffff",
-    boxShadow: "0 8px 18px rgba(34,197,94,0.35)",
-    opacity: submitting ? 0.7 : 1,
-  };
-
-  const inputStyle = {
-    width: "100%",
-    padding: "10px 12px",
-    borderRadius: 8,
-    border: "1px solid #d1d5db",
-    fontSize: 14,
-    marginBottom: 12,
-  };
-
-  const donationSection = {
-    marginTop: 32,
-  };
-
-  const donationTitle = {
-    fontSize: 18,
-    fontWeight: 700,
-    color: "#0f172a",
-    marginBottom: 8,
-    textAlign: "center",
-  };
-
-  const donationSubtitle = {
-    fontSize: 13,
-    color: "#64748b",
-    marginBottom: 16,
-    textAlign: "center",
-  };
-
-  const donationGrid = {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: 12,
-  };
-
-  const donationCard = {
-    borderRadius: 16,
-    border: "1px solid #e5e7eb",
-    background: "#ffffff",
-    boxShadow: "0 8px 22px rgba(15,23,42,0.06)",
-    padding: 12,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "stretch",
-    gap: 8,
-  };
-
-  const donationImg = {
-    width: "100%",
-    height: 140,
-    borderRadius: 12,
-    objectFit: "cover",
-    border: "1px solid #e5e7eb",
-  };
-
-  const donationName = {
-    fontSize: 14,
-    fontWeight: 700,
-    color: "#111827",
-  };
-
-  const donationPrice = {
-    fontSize: 16,
-    fontWeight: 800,
-    color: "#16a34a",
-    marginTop: 4,
-  };
-
-  const donationBtn = {
-    marginTop: 8,
-    padding: "8px 12px",
-    borderRadius: 999,
-    border: "none",
-    cursor: "pointer",
-    fontWeight: 600,
-    fontSize: 13,
-    background: "linear-gradient(135deg, #FACC15, #EAB308)",
-    color: "#1f2933",
-    boxShadow: "0 6px 14px rgba(250,204,21,0.45)",
-  };
-
-  const modalOverlay = {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(15,23,42,0.45)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 40,
-  };
-
-  const modalCard = {
-    background: "#ffffff",
-    borderRadius: 18,
-    padding: 24,
-    maxWidth: 480,
-    width: "90%",
-    boxShadow: "0 20px 40px rgba(15,23,42,0.25)",
-    textAlign: "center",
-  };
-
-  const modalTitle = {
-    fontSize: 20,
-    fontWeight: 700,
-    color: "#0f172a",
-    marginBottom: 8,
-  };
-
-  const modalText = {
-    fontSize: 14,
-    color: "#4b5563",
-    marginBottom: 16,
-    lineHeight: 1.5,
-  };
-
-  const modalButton = {
-    padding: "10px 18px",
-    borderRadius: 999,
-    border: "none",
-    cursor: "pointer",
-    fontWeight: 700,
-    fontSize: 14,
-    background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
-    color: "#ffffff",
-    boxShadow: "0 8px 18px rgba(37,99,235,0.35)",
-  };
-
-  const pixQrImg = {
-    width: 200,
-    height: 200,
-    objectFit: "contain",
-    margin: "0 auto 12px auto",
-    borderRadius: 12,
-    border: "1px solid #e5e7eb",
-    background: "#f9fafb",
-  };
-
-  const pixCodeBox = {
-    width: "100%",
-    textAlign: "left",
-    fontSize: 12,
-    color: "#374151",
-    marginTop: 10,
-  };
-
-  const pixCodeLabel = {
-    fontWeight: 600,
-    marginBottom: 4,
-    display: "block",
-  };
-
-  const pixCodeTextArea = {
-    width: "100%",
-    minHeight: 70,
-    borderRadius: 10,
-    border: "1px solid #e5e7eb",
-    padding: 8,
-    fontSize: 12,
-    resize: "none",
-    background: "#f9fafb",
-  };
-
-  const pixCopyBtn = {
-    marginTop: 8,
-    padding: "6px 12px",
-    borderRadius: 999,
-    border: "none",
-    cursor: "pointer",
-    fontWeight: 600,
-    fontSize: 13,
-    background: "linear-gradient(135deg, #FACC15, #EAB308)",
-    color: "#1f2933",
-    boxShadow: "0 6px 14px rgba(250,204,21,0.45)",
-  };
-
   return (
     <>
       <Nav />
-      <main style={page}>
-        <h2 style={h2}>Carrinho</h2>
+      <main className="min-h-[calc(100svh-56px)] max-w-5xl mx-auto px-6 pt-12 pb-[80px]">
+        <h2 className="text-3xl font-bold text-slate-900 text-center mb-8">Carrinho de Compras</h2>
 
-        {err && <div style={errorBox}>{err}</div>}
+        {err && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 text-sm font-medium text-center">
+            {err}
+          </div>
+        )}
 
-        <div style={card}>
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           {loading ? (
-            <div style={empty}>Carregando itens do carrinho...</div>
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="w-10 h-10 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mb-4"></div>
+              <p className="text-slate-500 font-medium">Carregando itens do carrinho...</p>
+            </div>
           ) : items.length === 0 ? (
-            <div style={empty}>
-              Seu carrinho está vazio. Acesse a página de{" "}
-              <strong>Produtos</strong> para escolher itens.
+            <div className="text-center py-20 px-6">
+              <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg className="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+              </div>
+              <p className="text-slate-600 text-lg mb-6">
+                Seu carrinho está vazio.
+              </p>
+              <button 
+                onClick={() => router.push("/products")}
+                className="inline-flex items-center justify-center px-8 py-3 rounded-full bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 hover:shadow-emerald-500/30 hover:-translate-y-0.5 transition-all"
+              >
+                Voltar à Loja
+              </button>
             </div>
           ) : (
             <>
-              <div style={tableWrap}>
-                <table style={table}>
-                  <thead>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-50 border-b border-slate-100">
                     <tr>
-                      <th style={th}>Produto</th>
-                      <th style={th}>Preço</th>
-                      <th style={th}>Qtd.</th>
-                      <th style={th}>Subtotal</th>
-                      <th style={th}>Ações</th>
+                      <th className="text-left py-4 px-6 text-sm font-bold text-slate-700 uppercase tracking-wider">Produto</th>
+                      <th className="text-left py-4 px-6 text-sm font-bold text-slate-700 uppercase tracking-wider">Preço</th>
+                      <th className="text-left py-4 px-6 text-sm font-bold text-slate-700 uppercase tracking-wider">Qtd.</th>
+                      <th className="text-left py-4 px-6 text-sm font-bold text-slate-700 uppercase tracking-wider">Subtotal</th>
+                      <th className="text-left py-4 px-6 text-sm font-bold text-slate-700 uppercase tracking-wider">Ações</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {items.map((item, index) => {
+                  <tbody className="divide-y divide-slate-100">
+                    {items.map((item) => {
                       const p = item.product;
                       const price = Number(p.price) || 0;
                       const subtotal = price * item.quantity;
 
                       return (
-                        <tr key={p.id} style={index % 2 ? rowAlt : undefined}>
-                          <td style={td}>
-                            <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 10,
-                              }}
-                            >
+                        <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="py-4 px-6">
+                            <div className="flex items-center gap-4">
                               {p.imageUrl ? (
                                 <img
                                   src={p.imageUrl}
                                   alt={p.name || p.title || "Produto"}
-                                  style={imgBox}
+                                  className="w-14 h-14 rounded-lg object-cover border border-slate-200 shadow-sm"
                                 />
                               ) : (
-                                <div
-                                  style={{
-                                    ...imgBox,
-                                    display: "grid",
-                                    placeItems: "center",
-                                    color: "#9ca3af",
-                                    fontSize: 12,
-                                  }}
-                                >
+                                <div className="w-14 h-14 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 text-xs border border-slate-200">
                                   —
                                 </div>
                               )}
                               <div>
-                                <div
-                                  style={{
-                                    fontWeight: 600,
-                                    color: "#111827",
-                                  }}
-                                >
+                                <div className="font-bold text-slate-900 text-sm md:text-base">
                                   {p.name || p.title}
                                 </div>
-                                <div
-                                  style={{
-                                    fontSize: 12,
-                                    color: "#6b7280",
-                                  }}
-                                >
+                                <div className="text-xs text-slate-500 mt-0.5">
                                   {p.category || "Sem categoria"}
                                 </div>
                               </div>
                             </div>
                           </td>
-                          <td style={td}>{formatCurrency(price)}</td>
-                          <td style={td}>{item.quantity}</td>
-                          <td style={td}>{formatCurrency(subtotal)}</td>
-                          <td style={td}>
+                          <td className="py-4 px-6 text-sm font-medium text-slate-600">
+                            {formatCurrency(price)}
+                          </td>
+                          <td className="py-4 px-6">
+                            <span className="inline-flex items-center justify-center min-w-[2rem] h-8 px-2 rounded-lg bg-slate-100 text-slate-700 font-bold text-sm">
+                              {item.quantity}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6 text-sm font-bold text-emerald-600">
+                            {formatCurrency(subtotal)}
+                          </td>
+                          <td className="py-4 px-6">
                             <button
                               type="button"
-                              style={btnRemove}
                               onClick={() => removeFromCart(p.id)}
+                              className="text-red-500 hover:text-red-700 font-semibold text-xs bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors"
                             >
-                              Retirar
+                              Remover
                             </button>
                           </td>
                         </tr>
@@ -741,185 +438,152 @@ export default function CartPage() {
                 </table>
               </div>
 
-              <div style={totalBox}>
-                <div style={{ width: "100%", marginBottom: 16 }}>
-                  <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 14 }}>
-                    Nome de quem vai retirar <span style={{ color: "red" }}>*</span>
-                  </label>
-                  <input
-                    style={inputStyle}
-                    placeholder="Ex: João da Silva"
-                    value={pickupName}
-                    onChange={(e) => setPickupName(e.target.value)}
-                    required
-                  />
+              <div className="bg-slate-50 p-6 md:p-8 border-t border-slate-100">
+                <div className="grid md:grid-cols-2 gap-8 items-start">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1.5">
+                        Nome de quem vai retirar <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                        placeholder="Ex: João da Silva"
+                        value={pickupName}
+                        onChange={(e) => setPickupName(e.target.value)}
+                        required
+                      />
+                    </div>
 
-                  <label style={{ display: "block", marginBottom: 4, fontWeight: 600, fontSize: 14 }}>
-                    WhatsApp para contato (opcional)
-                  </label>
-                  <input
-                    style={inputStyle}
-                    placeholder="(00) 00000-0000"
-                    value={whatsapp}
-                    onChange={handlePhoneChange}
-                    maxLength={15}
-                  />
-                </div>
-
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-                  <div>
-                    <span style={totalLabel}>Total geral:</span>
-                    <span style={totalValue}>{formatCurrency(total)}</span>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1.5">
+                        WhatsApp para contato (opcional)
+                      </label>
+                      <input
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                        placeholder="(00) 00000-0000"
+                        value={whatsapp}
+                        onChange={handlePhoneChange}
+                        maxLength={15}
+                      />
+                    </div>
                   </div>
 
-                  <button
-                    type="button"
-                    style={payBtn}
-                    onClick={handleCheckout}
-                    disabled={submitting}
-                  >
-                    {submitting ? "Gerando PIX..." : "Pagar com PIX"}
-                  </button>
+                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
+                    <div className="flex justify-between items-center pb-4 border-b border-slate-100">
+                      <span className="text-slate-600 font-medium">Total geral</span>
+                      <span className="text-2xl font-extrabold text-emerald-600">{formatCurrency(total)}</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleCheckout}
+                      disabled={submitting}
+                      className="w-full py-3.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-y-0"
+                    >
+                      {submitting ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                          Processando...
+                        </span>
+                      ) : (
+                        "Finalizar Pedido com PIX"
+                      )}
+                    </button>
+                    
+                    <p className="text-xs text-center text-slate-400">
+                      Ao finalizar, você receberá um QR Code para pagamento.
+                    </p>
+                  </div>
                 </div>
               </div>
             </>
           )}
         </div>
 
-        <p style={note}>
+        <p className="text-xs text-center text-slate-400 mt-6">
           * O carrinho é salvo apenas neste navegador. Para adicionar ou remover
-          itens, utilize esta tela ou a página de <strong>Produtos</strong>.
+          itens, utilize esta tela ou a página de <strong className="text-slate-600">Produtos</strong>.
         </p>
 
-        <section style={donationSection}>
-          <h3 style={donationTitle}>Apoie a APAE – Pinhão com uma doação</h3>
-          <p style={donationSubtitle}>
-            Escolha um valor simbólico e adicione ao carrinho. Toda ajuda faz
-            diferença 💛
-          </p>
+        <section className="mt-16 mb-8">
+          <div className="text-center mb-8">
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Apoie a APAE – Pinhão com uma doação</h3>
+            <p className="text-slate-600 text-sm">
+              Escolha um valor simbólico e adicione ao carrinho. Toda ajuda faz diferença 💛
+            </p>
+          </div>
 
-          <div style={donationGrid}>
-            <div style={donationCard}>
-              <img
-                src={DONATION_ITEMS["donation-10"].imageUrl}
-                alt="Doação R$ 10,00"
-                style={donationImg}
-              />
-              <div style={donationName}>Doação solidária</div>
-              <div style={donationPrice}>
-                {formatCurrency(DONATION_ITEMS["donation-10"].price)}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            {Object.values(DONATION_ITEMS).map((item) => (
+              <div key={item.id} className="group bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col items-center text-center hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                <div className="w-full aspect-[4/3] rounded-xl overflow-hidden mb-4 bg-yellow-50">
+                  <img
+                    src={item.imageUrl}
+                    alt={item.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
+                </div>
+                <div className="font-bold text-slate-900 mb-1">Doação solidária</div>
+                <div className="text-2xl font-extrabold text-emerald-600 mb-4">
+                  {formatCurrency(item.price)}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => addDonationToCart(item.id)}
+                  className="w-full py-2.5 rounded-full bg-yellow-400 text-yellow-950 font-bold text-sm shadow-md shadow-yellow-400/20 hover:bg-yellow-300 hover:shadow-yellow-400/30 transition-all"
+                >
+                  Adicionar Doação
+                </button>
               </div>
-              <button
-                type="button"
-                style={donationBtn}
-                onClick={() => addDonationToCart("donation-10")}
-              >
-                Doar
-              </button>
-            </div>
-
-            <div style={donationCard}>
-              <img
-                src={DONATION_ITEMS["donation-30"].imageUrl}
-                alt="Doação R$ 30,00"
-                style={donationImg}
-              />
-              <div style={donationName}>Doação solidária</div>
-              <div style={donationPrice}>
-                {formatCurrency(DONATION_ITEMS["donation-30"].price)}
-              </div>
-              <button
-                type="button"
-                style={donationBtn}
-                onClick={() => addDonationToCart("donation-30")}
-              >
-                Doar
-              </button>
-            </div>
-
-            <div style={donationCard}>
-              <img
-                src={DONATION_ITEMS["donation-100"].imageUrl}
-                alt="Doação R$ 100,00"
-                style={donationImg}
-              />
-              <div style={donationName}>Doação solidária</div>
-              <div style={donationPrice}>
-                {formatCurrency(DONATION_ITEMS["donation-100"].price)}
-              </div>
-              <button
-                type="button"
-                style={donationBtn}
-                onClick={() => addDonationToCart("donation-100")}
-              >
-                Doar
-              </button>
-            </div>
+            ))}
           </div>
         </section>
 
         {showThanksModal && (
-          <div style={modalOverlay}>
-            <div style={modalCard}>
-              <h3 style={modalTitle}>💛 Obrigado pelo seu apoio!</h3>
-              <p style={modalText}>
-                Seu pedido foi registrado com sucesso. Para concluir o
-                pagamento, utilize o QR Code PIX ou o código copia-e-cola abaixo.
-                Assim que o pagamento for confirmado, o valor será destinado
-                diretamente à APAE – Pinhão.
-              </p>
-
-              {pixQrBase64 && (
-                <img
-                  src={`data:image/png;base64,${pixQrBase64}`}
-                  alt="QR Code PIX"
-                  style={pixQrImg}
-                />
-              )}
-
-              {pixCopyCode && (
-                <div style={pixCodeBox}>
-                  <span style={pixCodeLabel}>Código PIX (copia e cola):</span>
-                  <textarea
-                    readOnly
-                    style={pixCodeTextArea}
-                    value={pixCopyCode}
-                  />
-                  <button
-                    type="button"
-                    style={pixCopyBtn}
-                    onClick={handleCopyPixCode}
-                  >
-                    Copiar código PIX
-                  </button>
-                </div>
-              )}
-
-              {pixTicketUrl && (
-                <p
-                  style={{
-                    fontSize: 12,
-                    marginTop: 10,
-                    color: "#1d4ed8",
-                  }}
-                >
-                  Se preferir, você pode abrir o pagamento em outra aba:{" "}
-                  <a
-                    href={pixTicketUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ textDecoration: "underline", color: "#1d4ed8" }}
-                  >
-                    ver detalhes do PIX
-                  </a>
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-zoom-in">
+              <div className="p-6 text-center">
+                <h3 className="text-xl font-bold text-slate-900 mb-2">Obrigado pelo seu apoio!</h3>
+                <p className="text-slate-600 text-sm leading-relaxed mb-5">
+                  Seu pedido foi registrado com sucesso. Para concluir o
+                  pagamento, utilize o QR Code PIX ou o código copia-e-cola abaixo.
                 </p>
-              )}
 
-              <div style={{ marginTop: 18 }}>
+                {pixQrBase64 && (
+                  <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-inner mb-4 inline-block">
+                    <img
+                      src={`data:image/png;base64,${pixQrBase64}`}
+                      alt="QR Code PIX"
+                      className="w-32 h-32 object-contain"
+                    />
+                  </div>
+                )}
+
+                {pixCopyCode && (
+                  <div className="text-left bg-slate-50 rounded-xl p-3 border border-slate-200 mb-4">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Código PIX (copia e cola):</span>
+                    <textarea
+                      readOnly
+                      className="w-full h-12 bg-white border border-slate-200 rounded-lg p-2 text-[10px] text-slate-600 font-mono resize-none focus:outline-none mb-2"
+                      value={pixCopyCode}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCopyPixCode}
+                      className="w-full py-2 rounded-lg bg-yellow-400 text-yellow-950 font-bold text-xs hover:bg-yellow-300 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                      </svg>
+                      Copiar código PIX
+                    </button>
+                  </div>
+                )}
+
                 <button
                   type="button"
-                  style={modalButton}
                   onClick={handleGoBackToStore}
+                  className="w-full py-3 rounded-full bg-slate-900 text-white font-bold shadow-lg hover:bg-slate-800 hover:-translate-y-0.5 transition-all text-sm"
                 >
                   Voltar à loja
                 </button>

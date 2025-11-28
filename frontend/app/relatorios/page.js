@@ -209,7 +209,7 @@ export default function RelatoriosPage() {
 
   const page = {
     minHeight: "calc(100svh - 56px)",
-    padding: 16,
+    padding: "16px 16px 80px 16px",
     display: "grid",
     gridTemplateColumns: "260px 1fr",
     gap: 16,

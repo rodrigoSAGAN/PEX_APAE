@@ -270,289 +270,6 @@ export default function ProductsPage() {
     return cat === filterClass;
   });
 
-  const wrapGrid = {
-    padding: 16,
-    maxWidth: 1200,
-    margin: "0 auto",
-    display: "grid",
-    gridTemplateColumns: "260px 1fr",
-    gap: 16,
-  };
-
-  const wrapFull = {
-    padding: 16,
-    maxWidth: 1200,
-    margin: "0 auto",
-    display: "block",
-  };
-
-  const mainContent = {
-    background:
-      "linear-gradient(135deg, rgba(219,234,254,0.85), rgba(239,246,255,0.9))",
-    borderRadius: 24,
-    boxShadow: "0 12px 30px rgba(15,23,42,0.08)",
-    padding: 24,
-    minWidth: 0,
-  };
-
-  const h2 = {
-    textAlign: "center",
-    margin: "12px 0 16px 0",
-    color: "#111827",
-    fontSize: 26,
-  };
-
-  const filterBar = {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 16,
-    flexWrap: "wrap",
-  };
-
-  const filterLabel = {
-    fontSize: 14,
-    color: "#374151",
-    fontWeight: 600,
-  };
-
-  const select = {
-    padding: "6px 10px",
-    borderRadius: 8,
-    border: "1px solid #d1d5db",
-    fontSize: 14,
-    background: "#fff",
-  };
-
-  const cartInfoWrap = {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    flexWrap: "wrap",
-  };
-
-  const cartInfoText = {
-    fontSize: 13,
-    color: "#4b5563",
-  };
-
-  const cartButton = {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "8px 16px",
-    borderRadius: 999,
-    border: "1px solid rgba(191,219,254,0.95)",
-    background:
-      "linear-gradient(135deg, #3b82f6 0%, #2563eb 40%, #1d4ed8 100%)",
-    color: "#f9fafb",
-    fontWeight: 800,
-    fontSize: 14,
-    textDecoration: "none",
-    boxShadow: "0 6px 14px rgba(37,99,235,0.45)",
-  };
-
-  const cardsGrid = {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: 16,
-  };
-
-  const card = {
-    borderRadius: 16,
-    border: "1px solid #e5e7eb",
-    background: "#ffffff",
-    boxShadow: "0 8px 18px rgba(15,23,42,0.05)",
-    display: "flex",
-    flexDirection: "column",
-    overflow: "hidden",
-  };
-
-  const imageWrap = {
-    width: "100%",
-    paddingTop: "62%",
-    position: "relative",
-    background: "#f9fafb",
-  };
-
-  const cardImg = {
-    position: "absolute",
-    inset: 0,
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-  };
-
-  const cardBody = {
-    padding: 12,
-    display: "flex",
-    flexDirection: "column",
-    gap: 6,
-    flex: 1,
-  };
-
-  const titleRow = {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 8,
-  };
-
-  const prodName = {
-    fontWeight: 700,
-    color: "#0f172a",
-    fontSize: 15,
-  };
-
-  const categoryChip = {
-    padding: "2px 8px",
-    borderRadius: 999,
-    fontSize: 11,
-    background: "#eff6ff",
-    color: "#1d4ed8",
-    border: "1px solid #bfdbfe",
-  };
-
-  const priceText = {
-    fontSize: 18,
-    fontWeight: 800,
-    color: "#16a34a",
-  };
-
-  const metaRow = {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    fontSize: 12,
-    color: "#6b7280",
-  };
-
-  const statusBadgeBase = {
-    display: "inline-block",
-    padding: "2px 8px",
-    borderRadius: 999,
-    fontSize: 11,
-    border: "1px solid transparent",
-  };
-
-  const statusAtivo = {
-    ...statusBadgeBase,
-    background: "#e0f2fe",
-    color: "#1e40af",
-    borderColor: "#bfdbfe",
-  };
-
-  const statusInativo = {
-    ...statusBadgeBase,
-    background: "#fee2e2",
-    color: "#991b1b",
-    borderColor: "#fecaca",
-  };
-
-  const cardFooter = {
-    padding: "0 12px 10px 12px",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 8,
-    flexWrap: "wrap",
-  };
-
-  const btnCart = {
-    background: "#10b981",
-    color: "#fff",
-    border: "none",
-    borderRadius: 999,
-    padding: "6px 12px",
-    cursor: "pointer",
-    fontSize: 13,
-    fontWeight: 600,
-    boxShadow: "0 4px 10px rgba(16,185,129,0.25)",
-    flexShrink: 0,
-  };
-
-  const esgotadoBadge = {
-    ...btnCart,
-    background: "#9ca3af",
-    boxShadow: "none",
-    cursor: "default",
-  };
-
-  const adminActions = {
-    display: "flex",
-    gap: 6,
-    flexWrap: "wrap",
-    justifyContent: "flex-end",
-    flex: 1,
-  };
-
-  const btnEdit = {
-    background: "#2563eb",
-    color: "#fff",
-    border: "none",
-    borderRadius: 999,
-    padding: "4px 10px",
-    cursor: "pointer",
-    fontSize: 12,
-    fontWeight: 600,
-  };
-
-  const btnDelete = {
-    background: "#dc2626",
-    color: "#fff",
-    border: "none",
-    borderRadius: 999,
-    padding: "4px 10px",
-    cursor: "pointer",
-    fontSize: 12,
-    fontWeight: 600,
-  };
-
-  const formWrap = {
-    marginBottom: 20,
-    padding: 12,
-    borderRadius: 14,
-    background: "#f9fafb",
-    border: "1px solid #e5e7eb",
-  };
-
-  const formRow = {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  };
-
-  const inputSmall = {
-    padding: "8px 10px",
-    borderRadius: 8,
-    border: "1px solid #d1d5db",
-    fontSize: 13,
-    minWidth: 140,
-  };
-
-  const fileInput = {
-    fontSize: 12,
-  };
-
-  const previewBox = {
-    marginTop: 8,
-    textAlign: "center",
-    fontSize: 12,
-    color: "#6b7280",
-  };
-
-  const previewImg = {
-    marginTop: 4,
-    width: 80,
-    height: 80,
-    objectFit: "cover",
-    borderRadius: 12,
-    border: "1px solid #e5e7eb",
-  };
-
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const checkSize = () => setIsMobile(window.innerWidth < 768);
@@ -563,327 +280,417 @@ export default function ProductsPage() {
 
   const showSidebar = !isMobile && claims;
 
+  function handleQuickAdd(product) {
+    const newQ = (cart[product.id] || 0) + 1;
+    const rawStock = product.stock ?? 0;
+    const stockNumber = typeof rawStock === "number" ? rawStock : Number(rawStock);
+
+    if (stockNumber > 0 && newQ > stockNumber) {
+       showModal("Quantidade solicitada excede o estoque disponível.", "Aviso");
+       return;
+    }
+
+    const newCart = { ...cart, [product.id]: newQ };
+    setCart(newCart);
+    localStorage.setItem("portal-apae-cart", JSON.stringify(newCart));
+
+    if (auth.currentUser) {
+      auth.currentUser.getIdToken().then(token => {
+        fetch("/api/cart", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ items: newCart }),
+        }).catch(err => console.error("Erro ao salvar carrinho remoto:", err));
+      });
+    }
+  }
+
+  function handleDecrease(product) {
+    const currentQ = cart[product.id] || 0;
+    if (currentQ <= 0) return;
+
+    const newQ = currentQ - 1;
+    let newCart;
+
+    if (newQ === 0) {
+      newCart = { ...cart };
+      delete newCart[product.id];
+    } else {
+      newCart = { ...cart, [product.id]: newQ };
+    }
+
+    setCart(newCart);
+    localStorage.setItem("portal-apae-cart", JSON.stringify(newCart));
+
+    if (auth.currentUser) {
+      auth.currentUser.getIdToken().then(token => {
+        fetch("/api/cart", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ items: newCart }),
+        }).catch(err => console.error("Erro ao salvar carrinho remoto:", err));
+      });
+    }
+  }
+
   return (
     <>
       <Nav />
-      <div style={showSidebar ? wrapGrid : wrapFull}>
+      <div className={`min-h-screen ${showSidebar ? "grid grid-cols-[260px_1fr] gap-6 max-w-[1400px] mx-auto px-6 pt-8 pb-[80px]" : "max-w-7xl mx-auto px-6 pt-12 pb-[80px]"}`}>
         {showSidebar && <SideMenu claims={claims} />}
         
-        <main style={mainContent}>
-          <h2 style={h2}>Produtos</h2>
+        <main className="w-full">
+          <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-xl border border-slate-100 p-8">
+            <h2 className="text-3xl font-bold text-slate-900 text-center mb-8">Produtos</h2>
 
-          <div style={filterBar}>
-            <div>
-              <span style={filterLabel}>Filtrar por classe:&nbsp;</span>
-              <select
-                value={filterClass}
-                onChange={(e) => setFilterClass(e.target.value)}
-                style={select}
-              >
-                <option value="all">Todas</option>
-                <option value="artigos">Artigos</option>
-                <option value="cozinha">Cozinha</option>
-              </select>
-            </div>
-
-            <div style={cartInfoWrap}>
-              <div style={cartInfoText}>
-                Itens no carrinho:{" "}
-                <strong>
-                  {Object.values(cart).reduce((acc, n) => acc + n, 0)}
-                </strong>
-              </div>
-              <Link href="/carrinho" style={cartButton}>
-                Ver carrinho
-              </Link>
-            </div>
-          </div>
-
-          {canEdit && (
-            <form onSubmit={handleSave} style={formWrap}>
-              <div style={formRow}>
-                <input
-                  placeholder="Nome"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  required
-                  style={inputSmall}
-                />
-                <input
-                  placeholder="Preço"
-                  type="number"
-                  step="0.01"
-                  value={form.price}
-                  onChange={(e) => setForm({ ...form, price: e.target.value })}
-                  required
-                  style={inputSmall}
-                />
-                <input
-                  placeholder="Estoque"
-                  type="number"
-                  value={form.stock}
-                  onChange={(e) => setForm({ ...form, stock: e.target.value })}
-                  required
-                  style={inputSmall}
-                />
-                <input
-                  placeholder="Categoria (artigos, cozinha, ...)"
-                  value={form.category}
-                  onChange={(e) =>
-                    setForm({ ...form, category: e.target.value })
-                  }
-                  style={inputSmall}
-                />
-
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setImageFile(file);
-                      setImagePreview(URL.createObjectURL(file));
-                    } else {
-                      setImageFile(null);
-                      setImagePreview("");
-                    }
-                  }}
-                  style={fileInput}
-                />
-
-                <button
-                  type="submit"
-                  style={{
-                    background: "#16a34a",
-                    color: "#fff",
-                    border: "none",
-                    padding: "8px 14px",
-                    borderRadius: 999,
-                    cursor: "pointer",
-                    fontWeight: 700,
-                    fontSize: 13,
-                  }}
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-8 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-slate-600">Filtrar por classe:</span>
+                <select
+                  value={filterClass}
+                  onChange={(e) => setFilterClass(e.target.value)}
+                  className="px-4 py-2 rounded-full border border-slate-200 bg-white text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all cursor-pointer hover:border-emerald-300"
                 >
-                  {editing ? "Salvar" : "Adicionar"}
-                </button>
-
-                {editing && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditing(null);
-                      setForm({
-                        name: "",
-                        price: "",
-                        stock: "",
-                        category: "",
-                      });
-                      setImageFile(null);
-                      setImagePreview("");
-                    }}
-                    style={{
-                      background: "#9ca3af",
-                      color: "#fff",
-                      border: "none",
-                      padding: "8px 14px",
-                      borderRadius: 999,
-                      cursor: "pointer",
-                      fontWeight: 600,
-                      fontSize: 13,
-                    }}
-                  >
-                    Cancelar
-                  </button>
-                )}
+                  <option value="all">Todas</option>
+                  <option value="artigos">Artigos</option>
+                  <option value="cozinha">Cozinha</option>
+                </select>
               </div>
 
-              {imagePreview && (
-                <div style={previewBox}>
-                  Pré-visualização da imagem:
-                  <br />
-                  <img
-                    src={imagePreview}
-                    alt="Pré-visualização"
-                    style={previewImg}
-                  />
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-slate-600">
+                  Itens no carrinho:{" "}
+                  <strong className="text-emerald-600 text-base ml-1">
+                    {Object.values(cart).reduce((acc, n) => acc + n, 0)}
+                  </strong>
                 </div>
-              )}
-            </form>
-          )}
-
-          {loading && <div style={{ textAlign: "center" }}>Carregando...</div>}
-          {err && (
-            <div style={{ color: "crimson", textAlign: "center" }}>{err}</div>
-          )}
-          {!loading && !err && items.length === 0 && (
-            <div style={{ textAlign: "center", color: "#6b7280" }}>
-              Nenhum produto cadastrado.
+                <Link 
+                  href="/carrinho" 
+                  className="inline-flex items-center justify-center px-6 py-2.5 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-bold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300"
+                >
+                  Ver carrinho
+                </Link>
+              </div>
             </div>
-          )}
 
-          {!loading &&
-            !err &&
-            items.length > 0 &&
-            filteredItems.length === 0 && (
-              <div style={{ textAlign: "center", color: "#6b7280" }}>
-                Nenhum produto encontrado para a classe selecionada.
+            {canEdit && (
+              <form onSubmit={handleSave} className="mb-10 bg-slate-50 rounded-2xl p-6 border border-slate-200 shadow-sm">
+                <div className="flex flex-wrap gap-4 items-center justify-center">
+                  <input
+                    placeholder="Nome"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    required
+                    className="flex-1 min-w-[200px] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                  />
+                  <input
+                    placeholder="Preço"
+                    type="number"
+                    step="0.01"
+                    value={form.price}
+                    onChange={(e) => setForm({ ...form, price: e.target.value })}
+                    required
+                    className="w-32 px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                  />
+                  <input
+                    placeholder="Estoque"
+                    type="number"
+                    value={form.stock}
+                    onChange={(e) => setForm({ ...form, stock: e.target.value })}
+                    required
+                    className="w-32 px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                  />
+                  <input
+                    placeholder="Categoria (artigos, cozinha...)"
+                    value={form.category}
+                    onChange={(e) =>
+                      setForm({ ...form, category: e.target.value })
+                    }
+                    className="flex-1 min-w-[200px] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                  />
+
+                  <div className="relative group">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setImageFile(file);
+                          setImagePreview(URL.createObjectURL(file));
+                        } else {
+                          setImageFile(null);
+                          setImagePreview("");
+                        }
+                      }}
+                      className="block w-full text-xs text-slate-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-full file:border-0
+                        file:text-xs file:font-semibold
+                        file:bg-emerald-50 file:text-emerald-700
+                        hover:file:bg-emerald-100 cursor-pointer"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 rounded-full bg-emerald-600 text-white text-sm font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 hover:shadow-emerald-500/30 hover:-translate-y-0.5 transition-all duration-300"
+                  >
+                    {editing ? "Salvar Alterações" : "Adicionar Produto"}
+                  </button>
+
+                  {editing && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditing(null);
+                        setForm({
+                          name: "",
+                          price: "",
+                          stock: "",
+                          category: "",
+                        });
+                        setImageFile(null);
+                        setImagePreview("");
+                      }}
+                      className="px-6 py-2.5 rounded-full bg-slate-400 text-white text-sm font-bold hover:bg-slate-500 transition-all duration-300"
+                    >
+                      Cancelar
+                    </button>
+                  )}
+                </div>
+
+                {imagePreview && (
+                  <div className="mt-4 text-center">
+                    <p className="text-xs text-slate-500 mb-2">Pré-visualização:</p>
+                    <img
+                      src={imagePreview}
+                      alt="Pré-visualização"
+                      className="w-24 h-24 object-cover rounded-xl border border-slate-200 mx-auto shadow-sm"
+                    />
+                  </div>
+                )}
+              </form>
+            )}
+
+            {loading && (
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="w-10 h-10 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mb-4"></div>
+                <p className="text-slate-500 font-medium">Carregando produtos...</p>
+              </div>
+            )}
+            
+            {err && (
+              <div className="p-4 bg-red-50 text-red-600 rounded-xl text-center border border-red-100 mb-8">
+                {err}
               </div>
             )}
 
-          {filteredItems.length > 0 && (
-            <div style={cardsGrid}>
-              {filteredItems.map((p) => {
-                const price = "price" in p ? Number(p.price) : null;
-                const rawStock = "stock" in p ? p.stock : null;
-                const stockNumber =
-                  rawStock !== null
-                    ? typeof rawStock === "number"
-                      ? rawStock
-                      : Number(rawStock)
-                    : null;
-                const qtyInCart = cart[p.id] || 0;
+            {!loading && !err && items.length === 0 && (
+              <div className="text-center py-20 bg-slate-50 rounded-2xl border border-slate-100 border-dashed">
+                <p className="text-slate-500 text-lg">Nenhum produto cadastrado ainda.</p>
+              </div>
+            )}
 
-                const available =
-                  stockNumber !== null ? stockNumber - qtyInCart : null;
-                const isOutOfStock =
-                  stockNumber !== null && (stockNumber <= 0 || available <= 0);
+            {!loading && !err && items.length > 0 && filteredItems.length === 0 && (
+              <div className="text-center py-20 bg-slate-50 rounded-2xl border border-slate-100 border-dashed">
+                <p className="text-slate-500 text-lg">Nenhum produto encontrado nesta categoria.</p>
+              </div>
+            )}
 
-                return (
-                  <div key={p.id} style={card}>
-                    <div style={imageWrap}>
-                      {p.imageUrl ? (
-                        <img
-                          src={p.imageUrl}
-                          alt={p.name || p.title || "Produto"}
-                          style={cardImg}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            ...cardImg,
-                            display: "grid",
-                            placeItems: "center",
-                            color: "#9ca3af",
-                            fontSize: 12,
-                          }}
-                        >
-                          Sem imagem
+            {filteredItems.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredItems.map((p) => {
+                  const price = "price" in p ? Number(p.price) : null;
+                  const rawStock = "stock" in p ? p.stock : null;
+                  const stockNumber =
+                    rawStock !== null
+                      ? typeof rawStock === "number"
+                        ? rawStock
+                        : Number(rawStock)
+                      : null;
+                  const qtyInCart = cart[p.id] || 0;
+
+                  const available =
+                    stockNumber !== null ? stockNumber - qtyInCart : null;
+                  const isOutOfStock =
+                    stockNumber !== null && (stockNumber <= 0 || available <= 0);
+
+                  return (
+                    <div 
+                      key={p.id} 
+                      className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden"
+                    >
+                      <div className="relative w-full pt-[75%] bg-slate-50 overflow-hidden">
+                        {p.imageUrl ? (
+                          <img
+                            src={p.imageUrl}
+                            alt={p.name || p.title || "Produto"}
+                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center text-slate-400 bg-slate-100 text-sm font-medium">
+                            Sem imagem
+                          </div>
+                        )}
+                        
+                        <div className="absolute top-3 right-3 z-10">
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm ${
+                            p.active === false 
+                              ? "bg-red-100 text-red-700 border border-red-200" 
+                              : "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                          }`}>
+                            {p.active === false ? "Inativo" : "Ativo"}
+                          </span>
                         </div>
-                      )}
-                    </div>
 
-                    <div style={cardBody}>
-                      <div style={titleRow}>
-                        <div style={prodName}>{p.name || p.title}</div>
-                        <div style={categoryChip}>
-                          {(p.category || "Sem categoria").toString()}
-                        </div>
-                      </div>
+                        {qtyInCart > 0 && (
+                          <div className="absolute top-3 left-3 z-10 animate-in fade-in zoom-in duration-300">
+                            <span className="bg-emerald-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-md flex items-center gap-1">
+                              {qtyInCart}
+                            </span>
+                          </div>
+                        )}
 
-                      <div style={priceText}>
-                        {price !== null ? `R$ ${price.toFixed(2)}` : "—"}
-                      </div>
-
-                      <div style={metaRow}>
-                        <span>
-                          {stockNumber !== null
-                            ? `${stockNumber} un.`
-                            : "Estoque não inf."}
-                        </span>
-                        <span
-                          style={
-                            p.active === false ? statusInativo : statusAtivo
-                          }
-                        >
-                          {p.active === false ? "Inativo" : "Ativo"}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div style={cardFooter}>
-                      {isOutOfStock ? (
-                        <div style={esgotadoBadge}>Esgotado</div>
-                      ) : (
-                        <div style={{ display: "flex", gap: 8 }}>
+                        {!isOutOfStock && (
                           <button
-                            type="button"
-                            style={{
-                              ...btnCart,
-                              background: "#f3f4f6",
-                              color: "#1f2937",
-                              border: "1px solid #d1d5db",
-                              boxShadow: "none",
-                            }}
                             onClick={(e) => {
                               e.stopPropagation();
-                              const newQ = (cart[p.id] || 0) + 1;
-                              const newCart = { ...cart, [p.id]: newQ };
-                              setCart(newCart);
-                              localStorage.setItem("portal-apae-cart", JSON.stringify(newCart));
-                              
-                              if (auth.currentUser) {
-                                auth.currentUser.getIdToken().then(token => {
-                                  fetch("/api/cart", {
-                                    method: "POST",
-                                    headers: {
-                                      "Content-Type": "application/json",
-                                      Authorization: `Bearer ${token}`,
-                                    },
-                                    body: JSON.stringify({ items: newCart }),
-                                  }).catch(err => console.error("Erro ao salvar carrinho remoto:", err));
-                                });
-                              }
-                              
-                              showModal("Produto adicionado ao carrinho!", "Sucesso");
+                              handleQuickAdd(p);
                             }}
+                            className="absolute bottom-3 right-3 bg-emerald-600 hover:bg-emerald-700 text-white w-10 h-10 rounded-full grid place-items-center shadow-lg transition-transform active:scale-90 z-10"
+                            title="Adicionar 1 unidade"
                           >
-                            Adicionar
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                           </button>
-                          <button
-                            type="button"
-                            style={btnCart}
-                            onClick={() => addToCart(p)}
-                          >
-                            Comprar
-                          </button>
-                        </div>
-                      )}
+                        )}
+                      </div>
 
-                      {canEdit && (
-                        <div style={adminActions}>
-                          <button
-                            type="button"
-                            style={btnEdit}
-                            onClick={() => {
-                              setEditing(p);
-                              setForm({
-                                name: p.name || "",
-                                price: p.price || "",
-                                stock: p.stock || "",
-                                category: p.category || "",
-                              });
-                              setImageFile(null);
-                              setImagePreview(p.imageUrl || "");
-                              window.scrollTo({ top: 0, behavior: "smooth" });
-                            }}
-                          >
-                            Editar
-                          </button>
-                          <button
-                            type="button"
-                            style={btnDelete}
-                            onClick={() => handleDelete(p.id)}
-                          >
-                            Excluir
-                          </button>
+                      <div className="p-5 flex flex-col gap-4 flex-1">
+                        <div>
+                          <div className="flex justify-between items-start gap-2 mb-1">
+                            <h3 className="font-bold text-slate-900 text-base leading-tight line-clamp-2" title={p.name || p.title}>
+                              {p.name || p.title}
+                            </h3>
+                          </div>
+                          <span className="inline-block px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-wide border border-blue-100">
+                            {p.category || "Geral"}
+                          </span>
                         </div>
-                      )}
+
+                        <div className="flex items-end justify-between mt-auto pt-2 border-t border-slate-50">
+                          <div>
+                            <p className="text-xs text-slate-500 mb-0.5">Preço</p>
+                            <p className="text-xl font-extrabold text-emerald-600">
+                              {price !== null ? `R$ ${price.toFixed(2)}` : "—"}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-slate-500 mb-0.5">Estoque</p>
+                            <p className={`text-sm font-bold ${stockNumber !== null && stockNumber > 0 ? "text-slate-700" : "text-red-500"}`}>
+                              {stockNumber !== null ? `${stockNumber} un.` : "N/A"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-3 mt-2">
+                          {isOutOfStock ? (
+                            <button disabled className="w-full py-2.5 rounded-xl bg-slate-200 text-slate-500 font-bold text-sm cursor-not-allowed">
+                              Esgotado
+                            </button>
+                          ) : (
+                            <div className="grid grid-cols-2 gap-2">
+                              {qtyInCart > 0 ? (
+                                <div className="flex items-center justify-between bg-slate-50 rounded-xl border border-slate-200 px-1">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDecrease(p);
+                                    }}
+                                    className="w-8 h-full grid place-items-center text-amber-700 hover:bg-slate-100 rounded-l-md transition-colors"
+                                  >
+                                    -
+                                  </button>
+                                  <span className="text-sm font-bold text-slate-800">
+                                    {qtyInCart}
+                                  </span>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleQuickAdd(p);
+                                    }}
+                                    className="w-8 h-full grid place-items-center text-emerald-700 hover:bg-slate-100 rounded-r-md transition-colors"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleQuickAdd(p);
+                                    showModal("Produto adicionado ao carrinho!", "Sucesso");
+                                  }}
+                                  className="py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-sm hover:bg-slate-50 hover:border-slate-300 transition-colors"
+                                >
+                                  + Carrinho
+                                </button>
+                              )}
+                              
+                              <button
+                                type="button"
+                                onClick={() => addToCart(p)}
+                                className="py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm shadow-md shadow-emerald-200 hover:bg-emerald-700 hover:shadow-lg hover:-translate-y-0.5 transition-all"
+                              >
+                                Comprar
+                              </button>
+                            </div>
+                          )}
+
+                          {canEdit && (
+                            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditing(p);
+                                  setForm({
+                                    name: p.name || "",
+                                    price: p.price || "",
+                                    stock: p.stock || "",
+                                    category: p.category || "",
+                                  });
+                                  setImageFile(null);
+                                  setImagePreview(p.imageUrl || "");
+                                  window.scrollTo({ top: 0, behavior: "smooth" });
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 text-xs font-bold hover:bg-blue-100 transition-colors"
+                              >
+                                Editar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(p.id)}
+                                className="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition-colors"
+                              >
+                                Excluir
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </main>
       </div>
     </>

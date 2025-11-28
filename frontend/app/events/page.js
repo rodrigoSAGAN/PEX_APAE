@@ -161,218 +161,6 @@ export default function EventsPage() {
     }
   }
 
-  const wrapGrid = {
-    padding: 16,
-    maxWidth: 1200,
-    margin: "0 auto",
-    display: "grid",
-    gridTemplateColumns: "260px 1fr",
-    gap: 16,
-  };
-
-  const wrapFull = {
-    padding: 16,
-    maxWidth: 1200,
-    margin: "0 auto",
-    display: "block",
-  };
-
-  const mainContent = {
-    background:
-      "linear-gradient(135deg, rgba(219,234,254,0.85), rgba(239,246,255,0.9))",
-    borderRadius: 24,
-    boxShadow: "0 12px 30px rgba(15,23,42,0.08)",
-    padding: 24,
-    minWidth: 0,
-  };
-
-  const h2 = {
-    textAlign: "center",
-    margin: "12px 0 8px 0",
-    color: "#111827",
-    fontSize: 26,
-  };
-
-  const subtitle = {
-    textAlign: "center",
-    fontSize: 14,
-    color: "#4b5563",
-    marginBottom: 12,
-  };
-
-  const note = {
-    fontSize: 12,
-    color: "#6b7280",
-    textAlign: "center",
-    marginTop: 10,
-  };
-
-  const formWrap = {
-    marginBottom: 20,
-    padding: 16,
-    borderRadius: 16,
-    border: "1px solid #e5e7eb",
-    background: "#ffffff",
-    boxShadow: "0 8px 20px rgba(15,23,42,0.05)",
-  };
-
-  const formRow = {
-    display: "grid",
-    gridTemplateColumns: "2fr 1fr 1fr",
-    gap: 10,
-    marginBottom: 10,
-  };
-
-  const textAreaRow = { marginBottom: 10 };
-
-  const label = {
-    fontSize: 13,
-    fontWeight: 600,
-    color: "#374151",
-    marginBottom: 4,
-    display: "block",
-  };
-
-  const input = {
-    width: "100%",
-    padding: "8px 10px",
-    borderRadius: 10,
-    border: "1px solid #e5e7eb",
-    fontSize: 14,
-  };
-
-  const textArea = {
-    ...input,
-    minHeight: 70,
-    resize: "vertical",
-  };
-
-  const formActions = {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    justifyContent: "flex-end",
-  };
-
-  const btnPrimary = {
-    background: "#2563eb",
-    color: "#fff",
-    border: "none",
-    borderRadius: 999,
-    padding: "8px 16px",
-    cursor: "pointer",
-    fontWeight: 700,
-    fontSize: 14,
-  };
-
-  const btnSecondary = {
-    background: "#9ca3af",
-    color: "#fff",
-    border: "none",
-    borderRadius: 999,
-    padding: "8px 16px",
-    cursor: "pointer",
-    fontWeight: 600,
-    fontSize: 13,
-  };
-
-  const listCard = {
-    borderRadius: 16,
-    border: "1px solid #e5e7eb",
-    background: "#ffffff",
-    boxShadow: "0 8px 22px rgba(15,23,42,0.06)",
-    padding: 16,
-  };
-
-  const empty = {
-    textAlign: "center",
-    color: "#6b7280",
-    padding: 20,
-  };
-
-  const errorBox = {
-    background: "#fef2f2",
-    borderRadius: 8,
-    border: "1px solid #fecaca",
-    color: "#991b1b",
-    padding: "10px 12px",
-    marginBottom: 12,
-    fontSize: 14,
-  };
-
-  const eventItem = {
-    borderBottom: "1px solid #f1f5f9",
-    padding: "10px 0",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 12,
-  };
-
-  const eventMain = { flex: 1 };
-
-  const eventTitle = {
-    fontSize: 16,
-    fontWeight: 700,
-    color: "#111827",
-    marginBottom: 4,
-  };
-
-  const eventMeta = {
-    fontSize: 13,
-    color: "#4b5563",
-    marginBottom: 4,
-  };
-
-  const eventDesc = {
-    fontSize: 13,
-    color: "#6b7280",
-  };
-
-  const eventActions = {
-    display: "flex",
-    gap: 6,
-  };
-
-  const btnEdit = {
-    background: "#3b82f6",
-    color: "#fff",
-    border: "none",
-    borderRadius: 999,
-    padding: "4px 10px",
-    cursor: "pointer",
-    fontSize: 12,
-    fontWeight: 600,
-  };
-
-  const btnDelete = {
-    background: "#dc2626",
-    color: "#fff",
-    border: "none",
-    borderRadius: 999,
-    padding: "4px 10px",
-    cursor: "pointer",
-    fontSize: 12,
-    fontWeight: 600,
-  };
-
-  const infoImageWrap = {
-    margin: "24px auto 8px auto",
-    maxWidth: 900,
-    borderRadius: 24,
-    overflow: "hidden",
-    boxShadow: "0 16px 40px rgba(15,23,42,0.18)",
-    border: "1px solid #e5e7eb",
-    background: "#ffffff",
-  };
-
-  const infoImage = {
-    display: "block",
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-  };
-
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const checkSize = () => setIsMobile(window.innerWidth < 768);
@@ -386,27 +174,44 @@ export default function EventsPage() {
   return (
     <>
       <Nav />
-      <div style={showSidebar ? wrapGrid : wrapFull}>
+      <div className={`min-h-[calc(100svh-56px)] ${showSidebar ? "grid grid-cols-[260px_1fr] max-w-7xl mx-auto gap-6 p-6 pb-[80px]" : "block max-w-7xl mx-auto p-6 pb-[80px]"}`}>
         {showSidebar && <SideMenu claims={claims} />}
         
-        <main style={mainContent}>
-          <h2 style={h2}>Eventos</h2>
-          <p style={subtitle}>
-            Acompanhe as ações, campanhas e eventos da APAE-Pinhão.
-          </p>
+        <main className="w-full min-w-0 bg-gradient-to-br from-blue-50/80 to-blue-100/90 rounded-3xl shadow-xl border border-blue-100/50 p-6 md:p-8">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">Eventos</h2>
+            <p className="text-slate-600 text-sm md:text-base max-w-2xl mx-auto">
+              Acompanhe as ações, campanhas e eventos da APAE-Pinhão.
+            </p>
+          </div>
 
-          {err && <div style={errorBox}>{err}</div>}
+          {err && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 text-sm font-medium text-center">
+              {err}
+            </div>
+          )}
 
           {canEditEvents && (
-            <form onSubmit={handleSave} style={formWrap}>
-              <div style={formRow}>
-                <div>
-                  <label style={label} htmlFor="title">
+            <form onSubmit={handleSave} className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6 mb-10 animate-fade-in">
+              <div className="flex items-center gap-2 mb-6 pb-4 border-b border-slate-100">
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </div>
+                <h3 className="font-bold text-slate-800 text-lg">
+                  {editing ? "Editar Evento" : "Novo Evento"}
+                </h3>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-6 mb-6">
+                <div className="md:col-span-1">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2" htmlFor="title">
                     Título do evento
                   </label>
                   <input
                     id="title"
-                    style={input}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                     value={form.title}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, title: e.target.value }))
@@ -417,13 +222,13 @@ export default function EventsPage() {
                 </div>
 
                 <div>
-                  <label style={label} htmlFor="date">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2" htmlFor="date">
                     Data
                   </label>
                   <input
                     id="date"
                     type="date"
-                    style={input}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-600"
                     value={form.date}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, date: e.target.value }))
@@ -432,12 +237,12 @@ export default function EventsPage() {
                 </div>
 
                 <div>
-                  <label style={label} htmlFor="location">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2" htmlFor="location">
                     Local
                   </label>
                   <input
                     id="location"
-                    style={input}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                     value={form.location}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, location: e.target.value }))
@@ -447,13 +252,13 @@ export default function EventsPage() {
                 </div>
               </div>
 
-              <div style={textAreaRow}>
-                <label style={label} htmlFor="description">
+              <div className="mb-6">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2" htmlFor="description">
                   Descrição
                 </label>
                 <textarea
                   id="description"
-                  style={textArea}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all min-h-[100px] resize-y"
                   value={form.description}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, description: e.target.value }))
@@ -462,11 +267,10 @@ export default function EventsPage() {
                 />
               </div>
 
-              <div style={formActions}>
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
                 {editing && (
                   <button
                     type="button"
-                    style={btnSecondary}
                     onClick={() => {
                       setEditing(null);
                       setForm({
@@ -476,91 +280,121 @@ export default function EventsPage() {
                         description: "",
                       });
                     }}
+                    className="px-5 py-2.5 rounded-full bg-slate-100 text-slate-600 font-bold text-sm hover:bg-slate-200 transition-colors"
                   >
                     Cancelar
                   </button>
                 )}
 
-                <button type="submit" style={btnPrimary}>
-                  {editing ? "Salvar alterações" : "Cadastrar evento"}
+                <button 
+                  type="submit" 
+                  className="px-6 py-2.5 rounded-full bg-blue-600 text-white font-bold text-sm shadow-lg shadow-blue-500/30 hover:bg-blue-700 hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all"
+                >
+                  {editing ? "Salvar Alterações" : "Cadastrar Evento"}
                 </button>
               </div>
             </form>
           )}
 
-          <section style={listCard}>
+          <section>
             {loading ? (
-              <div style={empty}>Carregando eventos...</div>
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+                <p className="text-slate-500 font-medium">Carregando eventos...</p>
+              </div>
             ) : events.length === 0 ? (
-              <div style={empty}>Nenhum evento cadastrado no momento.</div>
-            ) : (
-              events.map((ev) => (
-                <div key={ev.id} style={eventItem}>
-                  <div style={eventMain}>
-                    <div style={eventTitle}>
-                      {ev.title || "Evento sem título"}
-                    </div>
-                    <div style={eventMeta}>
-                      {ev.date && (
-                        <>
-                          <strong>Data:</strong> {ev.date}
-                          {" | "}
-                        </>
-                      )}
-                      {ev.location && (
-                        <>
-                          <strong>Local:</strong> {ev.location}
-                        </>
-                      )}
-                    </div>
-                    {ev.description && (
-                      <div style={eventDesc}>{ev.description}</div>
-                    )}
-                  </div>
-
-                  {canEditEvents && (
-                    <div style={eventActions}>
-                      <button
-                        type="button"
-                        style={btnEdit}
-                        onClick={() => {
-                          setEditing(ev);
-                          setForm({
-                            title: ev.title || "",
-                            date: ev.date || "",
-                            location: ev.location || "",
-                            description: ev.description || "",
-                          });
-                        }}
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        style={btnDelete}
-                        onClick={() => handleDelete(ev.id)}
-                      >
-                        Excluir
-                      </button>
-                    </div>
-                  )}
+              <div className="text-center py-16 bg-white/50 rounded-2xl border border-blue-100">
+                <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                  📅
                 </div>
-              ))
+                <p className="text-slate-600 font-medium">Nenhum evento cadastrado no momento.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {events.map((ev) => (
+                  <div key={ev.id} className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden">
+                    <div className="h-2 bg-gradient-to-r from-blue-500 to-indigo-500"></div>
+                    <div className="p-6 flex-1 flex flex-col">
+                      <h3 className="text-lg font-bold text-slate-900 mb-3 group-hover:text-blue-600 transition-colors">
+                        {ev.title || "Evento sem título"}
+                      </h3>
+                      
+                      <div className="space-y-2 mb-4">
+                        {ev.date && (
+                          <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span className="font-medium">{ev.date}</span>
+                          </div>
+                        )}
+                        {ev.location && (
+                          <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span>{ev.location}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {ev.description && (
+                        <p className="text-sm text-slate-500 leading-relaxed line-clamp-3 mb-4 flex-1">
+                          {ev.description}
+                        </p>
+                      )}
+
+                      {canEditEvents && (
+                        <div className="flex items-center gap-2 pt-4 border-t border-slate-50 mt-auto">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditing(ev);
+                              setForm({
+                                title: ev.title || "",
+                                date: ev.date || "",
+                                location: ev.location || "",
+                                description: ev.description || "",
+                              });
+                            }}
+                            className="flex-1 py-2 rounded-lg bg-blue-50 text-blue-600 font-bold text-xs hover:bg-blue-100 transition-colors flex items-center justify-center gap-1"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(ev.id)}
+                            className="flex-1 py-2 rounded-lg bg-red-50 text-red-600 font-bold text-xs hover:bg-red-100 transition-colors flex items-center justify-center gap-1"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Excluir
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </section>
 
-          <div style={infoImageWrap}>
+          <div className="mt-12 mb-8 max-w-4xl mx-auto rounded-3xl overflow-hidden shadow-2xl border border-slate-200">
             <img
               src="/images/info.jpg"
               alt="Informações APAE-Pinhão"
-              style={infoImage}
+              className="w-full h-auto object-cover hover:scale-105 transition-transform duration-700"
             />
           </div>
 
-          <p style={note}>
+          <p className="text-xs text-center text-slate-500/80 max-w-2xl mx-auto">
             * A criação e edição de eventos é restrita a administradores ou
-            colaboradores autorizados (canEditEvents). Visitantes podem apenas
-            visualizar a agenda.
+            colaboradores autorizados. Visitantes podem apenas visualizar a agenda.
           </p>
         </main>
       </div>

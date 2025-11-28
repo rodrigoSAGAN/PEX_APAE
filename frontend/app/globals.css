@@ -1,43 +1,34 @@
+@import "tailwindcss";
+
 :root {
-  --background: #F8FAFC; 
-  --foreground: #0f172a; 
-  --nav-height: 62px;   
+  --background: #F8FAFC;
+  --foreground: #0f172a;
+  --nav-height: 62px;
 }
 
+@layer base {
+  html, body {
+    @apply h-full w-full max-w-full overflow-x-hidden bg-[var(--background)] text-[var(--foreground)];
+  }
 
-html,
-body {
-  min-height: 100%;
-  height: auto;
-  max-width: 100vw;
-  overflow-x: hidden; 
-  overflow-y: auto;   /* permite rolagem vertical  */
-}
+  body {
+    @apply m-0 font-sans antialiased;
+  }
 
-body {
-  margin: 0;
-  color: var(--foreground);
-  background:
-    radial-gradient(1200px 600px at 10% -10%, #FFFDE7 0%, transparent 40%),
-    radial-gradient(1000px 500px at 110% 0%, #ECFDF5 0%, transparent 40%),
-    var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+  * {
+    @apply box-border p-0 m-0;
+  }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
+  a {
+    @apply text-inherit no-underline;
+  }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-
-.logo {
-  filter: none;
+  body {
+    background-image:
+      radial-gradient(1200px 600px at 10% -10%, #FFFDE7 0%, transparent 40%),
+      radial-gradient(1000px 500px at 110% 0%, #ECFDF5 0%, transparent 40%),
+      var(--background);
+    background-repeat: no-repeat;
+    background-size: cover;
+  }
 }

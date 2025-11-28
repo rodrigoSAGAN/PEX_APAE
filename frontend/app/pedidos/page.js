@@ -274,7 +274,7 @@ export default function PedidosPage() {
   const pageWrap = {
     minHeight: "100vh",
     background: "#f8fafc",
-    paddingBottom: 40,
+    paddingBottom: 80,
   };
 
   const gridLayout = {

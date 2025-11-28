@@ -123,8 +123,8 @@ export default function DashboardPage() {
   const canEvents = claims?.canEditEvents === true;
 
   const page = {
-    minHeight: "calc(100svh - 56px)",
-    padding: 16,
+    minHeight: "100vh",
+    padding: "16px 16px 80px 16px",
     display: "grid",
     gridTemplateColumns: "260px 1fr",
     gap: 16,

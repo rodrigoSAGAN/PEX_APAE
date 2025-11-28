@@ -7,18 +7,23 @@ import "../../styles/inter-font.css";
 export default function NavbarUser({ user, handleLogout }) {
   const pathname = usePathname();
   const [isMobile, setIsMobile] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [hasCartItems, setHasCartItems] = useState(false);
 
   useEffect(() => {
     const checkSize = () => {
       if (typeof window !== "undefined") {
-        setIsMobile(window.innerWidth < 640);
+        setIsMobile(window.innerWidth < 768);
       }
     };
     checkSize();
     window.addEventListener("resize", checkSize);
     return () => window.removeEventListener("resize", checkSize);
   }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? "hidden" : "auto";
+  }, [menuOpen]);
 
   useEffect(() => {
     const checkCart = () => {
@@ -32,7 +37,7 @@ export default function NavbarUser({ user, handleLogout }) {
           }
         }
         setHasCartItems(false);
-      } catch (e) {
+      } catch {
         setHasCartItems(false);
       }
     };
@@ -40,7 +45,6 @@ export default function NavbarUser({ user, handleLogout }) {
     checkCart();
     window.addEventListener("storage", checkCart);
     const interval = setInterval(checkCart, 1000);
-
     return () => {
       window.removeEventListener("storage", checkCart);
       clearInterval(interval);
@@ -48,207 +52,238 @@ export default function NavbarUser({ user, handleLogout }) {
   }, []);
 
   const icons = {
+    menu: (
+      <svg width="30" height="30" stroke="#fff" strokeWidth="2" fill="none">
+        <path d="M4 7h22M4 15h22M4 23h22" />
+      </svg>
+    ),
+    close: (
+      <svg width="32" height="32" stroke="#fff" strokeWidth="2" fill="none">
+        <path d="M6 6l20 20M26 6L6 26" />
+      </svg>
+    ),
     home: (
-      <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 9.75L9 3l6 6.75V15a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 15v-3H7.5V15A1.5 1.5 0 0 1 6 16.5h-3A1.5 1.5 0 0 1 1.5 15V9.75Z" />
+      <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M3 10L10 3l7 7v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8Z" />
       </svg>
     ),
     shop: (
-      <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 4.5h12l-1 9.75A1.5 1.5 0 0 1 12.5 15.75h-7A1.5 1.5 0 0 1 4 14.25L3 4.5Z" />
-        <path d="M3 4.5l1.5-3h9L15 4.5" />
+      <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M3 4h14l-1 10H4L3 4Z" />
+        <path d="M3 4l2-3h9l2 3" />
       </svg>
     ),
     events: (
-      <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3.75 3h10.5A1.75 1.75 0 0 1 16 4.75v9.5A1.75 1.75 0 0 1 14.25 16H3.75A1.75 1.75 0 0 1 2 14.25v-9.5A1.75 1.75 0 0 1 3.75 3Z" />
-        <path d="M6 1.5v3" />
-        <path d="M12 1.5v3" />
-        <path d="M2 7.5h14" />
-      </svg>
-    ),
-    gallery: (
-      <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="4" width="14" height="12" rx="2" />
-        <circle cx="8" cy="10" r="2" />
-        <path d="M12 10l3 3" />
+      <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="3" y="5" width="14" height="12" rx="2" />
+        <path d="M7 3v4M13 3v4M3 9h14" />
       </svg>
     ),
     cart: (
-      <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="6.5" cy="15" r="1.5" />
-        <circle cx="13.5" cy="15" r="1.5" />
-        <path d="M3 3h2l2.5 9h7l2-6H6" />
+      <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="7" cy="17" r="1.3" />
+        <circle cx="14" cy="17" r="1.3" />
+        <path d="M3 4h2l2 9h7l2-6H6" />
       </svg>
     ),
     login: (
-      <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none">
         <path d="M8 12l3-3-3-3" />
         <path d="M11 9H3" />
-        <path d="M15 4v10a2 2 0 0 1-2 2h-4" />
+        <path d="M15 4v12a2 2 0 0 1-2 2H7" />
       </svg>
     ),
     logout: (
-      <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none">
         <path d="M9 12l3-3-3-3" />
         <path d="M12 9H4" />
-        <path d="M15 4v10a2 2 0 0 1-2 2H7" />
+        <path d="M15 4v12a2 2 0 0 1-2 2H7" />
       </svg>
     ),
     heart: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-        <path d="M12 21s-4.86-2.82-7.54-5.84C2.4 12.73 2 11.4 2 10.25 2 7.9 3.9 6 6.25 6 7.88 6 9.2 6.86 10 8c.8-1.14 2.12-2 3.75-2C16.1 6 18 7.9 18 10.25c0 1.15-.4 2.48-2.46 4.91C16.86 18.18 12 21 12 21z" />
+      <svg width="20" height="20" fill="currentColor">
+        <path d="M12 21s-5-3-7.6-6C2.2 12.8 2 11.5 2 10.3 2 8 3.9 6 6.2 6c1.6 0 2.9 1 3.8 2.2C11 7 12.3 6 13.9 6c2.3 0 4.1 2 4.1 4.3 0 1.2-.3 2.5-2.4 4.7C17 18 12 21 12 21z" />
       </svg>
     ),
   };
 
   const bar = {
-    position: "sticky",
+    position: "fixed",
     top: 0,
-    zIndex: 50,
-    backdropFilter: "saturate(180%) blur(14px)",
-    background: "linear-gradient(90deg, rgba(239,68,68,0.40) 0%, rgba(245,158,11,0.42) 18%, rgba(234,179,8,0.44) 32%, rgba(34,197,94,0.44) 48%, rgba(59,130,246,0.44) 66%, rgba(129,140,248,0.44) 82%, rgba(236,72,153,0.44) 100%)",
+    width: "100%",
+    zIndex: 90,
+    backdropFilter: "blur(18px)",
+    background:
+      "linear-gradient(90deg, rgba(239,68,68,0.40) 0%, rgba(245,158,11,0.42) 18%, rgba(234,179,8,0.44) 32%, rgba(34,197,94,0.44) 48%, rgba(59,130,246,0.44) 66%, rgba(129,140,248,0.44) 82%, rgba(236,72,153,0.44) 100%)",
     borderBottom: "1px solid rgba(15,23,42,0.12)",
-    fontFamily: "Inter, sans-serif",
+    height: isMobile ? (menuOpen ? "100vh" : "80px") : "auto",
+    transition: isMobile ? "height 0.35s ease" : "none",
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
   };
 
   const wrap = {
     maxWidth: 1200,
+    width: "100%",
     margin: "0 auto",
-    padding: isMobile ? "10px 12px" : "14px 20px",
+    padding: "10px 14px",
     display: "flex",
-    alignItems: isMobile ? "stretch" : "center",
-    justifyContent: isMobile ? "center" : "space-between",
-    gap: isMobile ? 12 : 20,
-    flexDirection: isMobile ? "column" : "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexShrink: 0,
   };
 
   const brandLogo = {
-    width: isMobile ? 72 : 92,
-    height: isMobile ? 64 : 82,
-    borderRadius: 999,
+    width: 70,
+    height: 60,
     objectFit: "cover",
-    border: "2px solid rgba(248,250,252,0.95)",
-    background: "#ffffff",
-    boxShadow: "0 4px 12px rgba(15,23,42,0.25)",
+    borderRadius: "999px",
+    border: "2px solid #fff",
+    background: "#fff",
   };
 
   const brand = {
     fontWeight: 900,
-    color: "#f9fafb",
-    letterSpacing: 0.3,
-    fontSize: isMobile ? 18 : 20,
-    textShadow: "0 1px 4px rgba(15,23,42,0.45)",
+    fontSize: 20,
+    color: "white",
+    textShadow: "0 1px 4px rgba(0,0,0,0.4)",
   };
 
-  const link = (href) => ({
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 8,
-    padding: isMobile ? "8px 12px" : "10px 16px",
-    borderRadius: 999,
-    fontWeight: 700,
-    fontSize: 14,
-    color: pathname === href ? "#0f172a" : "#f9fafb",
-    textDecoration: "none",
-    background: pathname === href ? "rgba(248,250,252,0.95)" : "rgba(15,23,42,0.16)",
-    border: pathname === href ? "1px solid rgba(148,163,184,0.85)" : "1px solid transparent",
-    boxShadow: pathname === href ? "0 4px 12px rgba(15,23,42,0.18)" : "none",
-    transition: "background-color 140ms, color 140ms, border-color 140ms, box-shadow 140ms, transform 120ms",
-  });
-
-  const cta = {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    padding: isMobile ? "12px 22px" : "12px 22px",
-    borderRadius: 999,
-    border: "1px solid rgba(240,249,255,0.95)",
-    background: "linear-gradient(135deg, #22C55E 0%, #16A34A 40%, #15803D 100%)",
-    color: "#f9fafb",
-    fontWeight: 800,
-    textDecoration: "none",
-    fontSize: 16,
-    boxShadow: "0 8px 20px rgba(22,163,74,0.45)",
-    flex: isMobile ? "1 1 100%" : "0 0 auto",
-  };
-
-  const logoutBtn = {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 8,
-    padding: isMobile ? "8px 12px" : "10px 14px",
-    borderRadius: 999,
-    border: "1px solid rgba(248,250,252,0.85)",
-    background: "rgba(15,23,42,0.10)",
-    color: "#f9fafb",
-    fontWeight: 800,
-    cursor: "pointer",
-    fontSize: 14,
-  };
-
-  const navWrap = {
+  const menuItem = {
     display: "flex",
     alignItems: "center",
-    justifyContent: isMobile ? "center" : "flex-end",
-    gap: isMobile ? 10 : 14,
-    flexWrap: "wrap",
-    maxWidth: 900,
+    gap: 12,
+    padding: "14px 20px",
+    background: "rgba(255, 255, 255, 0.15)",
+    color: "#2C4257",
+    borderRadius: 14,
+    fontSize: 18,
+    fontWeight: 700,
+    textDecoration: "none",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+    border: "1px solid rgba(255, 255, 255, 0.2)",
+    transition: "background 0.2s ease, transform 0.2s ease",
+  };
+
+  const menuCTA = {
+    ...menuItem,
+    background: "linear-gradient(135deg, #22C55E, #15803D)",
+    color: "white",
+    fontWeight: 900,
+    border: "none",
+    boxShadow: "0 4px 12px rgba(22, 163, 74, 0.4)",
+  };
+
+  const mobileNavContainer = {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 18,
+    flex: 1,
+    opacity: menuOpen ? 1 : 0,
+    transition: "opacity 0.3s ease 0.1s",
+    pointerEvents: menuOpen ? "auto" : "none",
+    paddingBottom: 40,
+    width: "100%",
+  };
+
+  const mobileLink = {
+    ...menuItem,
+    width: "80%",
+    justifyContent: "center",
   };
 
   return (
     <header style={bar}>
       <div style={wrap}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: isMobile ? "center" : "flex-start" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <Link href="/">
-            <img src="/images/logo7.jpg" alt="Logo APAE Pinhão" style={brandLogo} />
+            <img src="/images/logo7.jpg" alt="Logo APAE" style={brandLogo} />
           </Link>
-          <Link href="/" style={brand}>
-            APAE – Pinhão
-          </Link>
+          <Link href="/" style={brand}>APAE – Pinhão</Link>
         </div>
 
-        <nav style={navWrap}>
-          <Link href="/" style={link("/")}>
+        {!isMobile && (
+          <nav style={{ display: "flex", gap: 14 }}>
+            <Link href="/" style={menuItem}>{icons.home} Início</Link>
+            <Link href="/products" style={menuItem}>{icons.shop} Loja</Link>
+            <Link href="/events" style={menuItem}>{icons.events} Eventos</Link>
+
+            {hasCartItems && (
+              <Link href="/carrinho" style={menuItem}>{icons.cart} Ver carrinho</Link>
+            )}
+
+            {!user && (
+              <Link href="/login" style={menuItem}>{icons.login} Entrar</Link>
+            )}
+
+            {user && (
+              <button onClick={handleLogout} style={menuItem}>
+                {icons.logout} Sair
+              </button>
+            )}
+
+            <Link href="/apoiar" style={menuCTA}>
+              {icons.heart} Apoiar
+            </Link>
+          </nav>
+        )}
+
+        {isMobile && (
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            style={{ background: "none", border: "none", cursor: "pointer" }}
+          >
+            {menuOpen ? icons.close : icons.menu}
+          </button>
+        )}
+      </div>
+
+      {isMobile && (
+        <nav style={mobileNavContainer}>
+          <Link href="/" style={mobileLink} onClick={() => setMenuOpen(false)}>
             {icons.home} Início
           </Link>
 
-          <Link href="/products" style={link("/products")}>
+          <Link href="/products" style={mobileLink} onClick={() => setMenuOpen(false)}>
             {icons.shop} Loja
           </Link>
 
-          <Link href="/events" style={link("/events")}>
+          <Link href="/events" style={mobileLink} onClick={() => setMenuOpen(false)}>
             {icons.events} Eventos
           </Link>
 
-          <Link href="/galeria" style={link("/galeria")}>
-            {icons.gallery} Galeria
-          </Link>
-
           {hasCartItems && (
-            <Link href="/carrinho" style={link("/carrinho")}>
+            <Link href="/carrinho" style={mobileLink} onClick={() => setMenuOpen(false)}>
               {icons.cart} Ver carrinho
             </Link>
           )}
 
           {!user && (
-            <Link href="/login" style={link("/login")}>
+            <Link href="/login" style={mobileLink} onClick={() => setMenuOpen(false)}>
               {icons.login} Entrar
             </Link>
           )}
 
           {user && (
-            <button onClick={handleLogout} type="button" style={logoutBtn}>
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                handleLogout();
+              }}
+              style={mobileLink}
+            >
               {icons.logout} Sair
             </button>
           )}
 
-          <Link href="/carrinho" style={cta}>
+          <Link href="/apoiar" style={{ ...menuCTA, width: "80%", justifyContent: "center" }} onClick={() => setMenuOpen(false)}>
             {icons.heart} Apoiar
           </Link>
         </nav>
-      </div>
+      )}
     </header>
   );
 }

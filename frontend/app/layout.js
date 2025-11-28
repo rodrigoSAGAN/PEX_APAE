@@ -1,6 +1,8 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ModalProvider } from "../components/ModalContext";
+import FooterWrapper from "../components/FooterWrapper";
+import PageContentWrapper from "../components/PageContentWrapper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -12,7 +14,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata = { title: "Portal APAE" };
+export const metadata = { 
+  title: "Portal APAE",
+  icons: {
+    icon: "/favicon.ico",
+  },
+};
 
 export default function RootLayout({ children }) {
   return (
@@ -24,8 +31,12 @@ export default function RootLayout({ children }) {
           height: "100%",
         }}
         className={`${geistSans.variable} ${geistMono.variable}`}
+        suppressHydrationWarning
       >
-        <ModalProvider>{children}</ModalProvider>
+        <ModalProvider>
+          <PageContentWrapper>{children}</PageContentWrapper>
+          <FooterWrapper />
+        </ModalProvider>
       </body>
     </html>
   );
