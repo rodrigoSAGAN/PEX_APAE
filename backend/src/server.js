@@ -4,18 +4,7 @@ import path from "path";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const rootDir = __dirname;
-
-dotenv.config();
-
-console.log(
-  "MP_ACCESS_TOKEN carregado?",
-  process.env.MP_ACCESS_TOKEN ? "SIM" : "NÃO"
-);
-
+// Rotas
 import healthRouter from "./routes/health.js";
 import productsRouter from "./routes/products.js";
 import usersRouter from "./routes/users.js";
@@ -25,15 +14,37 @@ import logsRouter from "./routes/logs.js";
 import pixRouter from "./routes/pix.js";
 import cartRouter from "./routes/cart.js";
 import salesRouter from "./routes/salesRoutes.js";
+import webhookRouter from "./routes/webhook.js";
+import paymentsRouter from "./routes/payments.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootDir = __dirname;
+
+dotenv.config();
+
+console.log(
+  "MP_ACCESS_TOKEN carregado?",
+  process.env.MP_ACCESS_TOKEN ? "SIM" : "NÃO"
+);
 
 const app = express();
 
 app.use(cors());
+
+/**
+ * ✅ Webhook ANTES do JSON
+ */
+app.use("/webhook", webhookRouter);
+
+// ✅ JSON depois
 app.use(express.json());
 
+// ✅ Uploads
 const uploadsPath = path.join(rootDir, "..", "uploads");
 app.use("/uploads", express.static(uploadsPath));
 
+// ✅ Rotas
 app.use("/api/health", healthRouter);
 app.use("/api/products", productsRouter);
 app.use("/api/users", usersRouter);
@@ -43,8 +54,10 @@ app.use("/api/logs", logsRouter);
 app.use("/api/pix", pixRouter);
 app.use("/api/cart", cartRouter);
 app.use("/api/sales", salesRouter);
+app.use("/api/payments", paymentsRouter);
 
 const PORT = process.env.PORT || 4000;
+
 app.listen(PORT, () => {
   console.log(`API rodando em http://localhost:${PORT}`);
   console.log(`Servindo uploads a partir de: ${uploadsPath}`);

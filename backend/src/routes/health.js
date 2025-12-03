@@ -9,7 +9,6 @@ router.get("/", (_req, res) => {
 
 router.get("/db", async (_req, res) => {
   try {
-    
     const snap = await db.collection("products").limit(1).get();
     res.json({ db: "ok", sampleCount: snap.size });
   } catch (e) {
@@ -18,4 +17,3 @@ router.get("/db", async (_req, res) => {
 });
 
 export default router;
-

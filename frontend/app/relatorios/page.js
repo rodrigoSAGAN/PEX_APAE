@@ -34,6 +34,7 @@ export default function RelatoriosPage() {
   const [logs, setLogs] = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
+  const [expandedLogs, setExpandedLogs] = useState(new Set());
 
 
   const [month, setMonth] = useState(new Date().getMonth() + 1);
@@ -160,11 +161,14 @@ export default function RelatoriosPage() {
 
   if (!ready) return null;
 
+  // Responsive styles
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
   const page = {
     minHeight: "calc(100svh - 56px)",
     padding: "16px 16px 80px 16px",
     display: "grid",
-    gridTemplateColumns: "260px 1fr",
+    gridTemplateColumns: isMobile ? "1fr" : "260px 1fr",
     gap: 16,
     maxWidth: 1120,
     margin: "0 auto",
@@ -174,7 +178,7 @@ export default function RelatoriosPage() {
   const panel = {
     border: "1px solid #e2e8f0",
     borderRadius: 16,
-    padding: 32,
+    padding: isMobile ? 16 : 32,
     background: "#ffffff",
     boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
   };
@@ -200,29 +204,74 @@ export default function RelatoriosPage() {
 
   const th = {
     background: "#f1f5f9",
-    padding: "12px 16px",
+    padding: isMobile ? "8px 12px" : "12px 16px",
     textAlign: "left",
     fontWeight: 600,
     fontSize: 13,
     color: "#475569",
     textTransform: "uppercase",
     letterSpacing: "0.05em",
+    whiteSpace: "nowrap",
   };
 
   const td = {
-    padding: "16px",
+    padding: isMobile ? "12px" : "16px",
     borderBottom: "1px solid #f1f5f9",
     fontSize: 14,
     color: "#334155",
+    whiteSpace: "nowrap",
+  };
+
+  const tdDetails = {
+    ...td,
+    whiteSpace: "normal",
+    wordBreak: "break-word",
+    maxWidth: "300px",
+    cursor: "pointer",
+  };
+
+  const toggleLog = (id) => {
+    setExpandedLogs((prev) => {
+      const newSet = new Set(prev);
+      newSet.has(id) ? newSet.delete(id) : newSet.add(id);
+      return newSet;
+    });
   };
 
 
   return (
     <>
+      <style jsx global>{`
+        @media (max-width: 767px) {
+          .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+          }
+          .side-menu-mobile {
+            display: none !important;
+          }
+        }
+        .log-details-collapsed {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .log-details-expanded {
+          white-space: normal;
+          word-break: break-word;
+        }
+        .log-details-cell:hover {
+          background-color: #f8fafc;
+        }
+      `}</style>
       <Nav />
 
       <main style={page}>
-        <SideMenu claims={claims} />
+        <div className="side-menu-mobile">
+          <SideMenu claims={claims} />
+        </div>
 
         <section style={panel}>
           <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6 }}>
@@ -390,7 +439,7 @@ export default function RelatoriosPage() {
 
           {/* 1 MÊS */}
           {reportData && Array.isArray(reportData) && !allMonths && (
-            <div
+            <div className="table-wrapper"
               style={{
                 border: "1px solid #e5e7eb",
                 borderRadius: 12,
@@ -400,6 +449,9 @@ export default function RelatoriosPage() {
               }}
             >
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <caption style={{ clip: "rect(0 0 0 0)", position: "absolute" }}>
+                  Relatório de vendas do mês selecionado
+                </caption>
                 <thead>
                   <tr>
                     <th style={th}>Data</th>
@@ -524,7 +576,7 @@ export default function RelatoriosPage() {
           </button>
 
           {showLogs && (
-            <div
+            <div className="table-wrapper"
               style={{
                 border: "1px solid #e5e7eb",
                 borderRadius: 12,
@@ -540,6 +592,9 @@ export default function RelatoriosPage() {
                 </div>
               ) : (
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <caption style={{ clip: "rect(0 0 0 0)", position: "absolute" }}>
+                    Logs de alterações do sistema
+                  </caption>
                   <thead>
                     <tr>
                       <th style={th}>Data/Hora</th>
@@ -552,18 +607,23 @@ export default function RelatoriosPage() {
                   <tbody>
                     {logs.map((log) => (
                       <tr key={log.id}>
-                        <td style={td}>
-                          {new Date(
-                            log.createdAt || log.timestamp
-                          ).toLocaleString("pt-BR")}
-                        </td>
-                        <td style={td}>
-                          {log.userEmail || log.userName || "—"}
-                        </td>
+                        <td style={td}>{new Date(log.createdAt || log.timestamp).toLocaleString("pt-BR")}</td>
+                        <td style={td}>{log.userEmail || log.userName || "—"}</td>
                         <td style={td}>{log.type}</td>
                         <td style={td}>{log.action}</td>
-                        <td style={td}>
-                          {log.details || JSON.stringify(log)}
+                        <td
+                          style={tdDetails}
+                          className="log-details-cell"
+                          onClick={() => toggleLog(log.id)}
+                          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), toggleLog(log.id))}
+                          role="button"
+                          tabIndex={0}
+                          aria-label="Detalhes do log"
+                          aria-expanded={expandedLogs.has(log.id)}
+                        >
+                          <div className={expandedLogs.has(log.id) ? "log-details-expanded" : "log-details-collapsed"}>
+                            {log.details || JSON.stringify(log)}
+                          </div>
                         </td>
                       </tr>
                     ))}

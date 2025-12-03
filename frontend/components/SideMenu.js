@@ -44,23 +44,23 @@ export default function SideMenu({ claims }) {
   };
 
   return (
-    <aside style={asidePanel}>
+    <aside style={asidePanel} role="navigation" aria-label="Menu lateral">
       <strong style={{ color: "#0f172a", padding: "0 4px" }}>Menu</strong>
       <ul style={asideList}>
         <li>
-          <Link href="/products" style={getStyle("/products")}>
+          <Link href="/products" style={getStyle("/products")} aria-current={pathname === "/products" ? "page" : undefined}>
             Lojinha
           </Link>
         </li>
 
         <li>
-          <Link href="/pedidos" style={getStyle("/pedidos")}>
+          <Link href="/pedidos" style={getStyle("/pedidos")} aria-current={pathname === "/pedidos" ? "page" : undefined}>
             Pedidos
           </Link>
         </li>
 
         <li>
-          <Link href="/events" style={getStyle("/events")}>
+          <Link href="/events" style={getStyle("/events")} aria-current={pathname === "/events" ? "page" : undefined}>
             Eventos
           </Link>
         </li>
@@ -68,17 +68,17 @@ export default function SideMenu({ claims }) {
         {isAdmin && (
           <>
             <li>
-              <Link href="/relatorios" style={getStyle("/relatorios")}>
+              <Link href="/relatorios" style={getStyle("/relatorios")} aria-current={pathname === "/relatorios" ? "page" : undefined}>
                 Relatórios
               </Link>
             </li>
             <li>
-              <Link href="/controle" style={getStyle("/controle")}>
+              <Link href="/controle" style={getStyle("/controle")} aria-current={pathname === "/controle" ? "page" : undefined}>
                 Permissões
               </Link>
             </li>
             <li>
-              <Link href="/galeria" style={getStyle("/galeria")}>
+              <Link href="/galeria" style={getStyle("/galeria")} aria-current={pathname === "/galeria" ? "page" : undefined}>
                 Galeria
               </Link>
             </li>

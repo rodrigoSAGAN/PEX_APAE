@@ -77,7 +77,7 @@ export default function CartPage() {
     }
   }, [cartMap, readyToPersist]);
 
- 
+
   useEffect(() => {
     async function load() {
       setErr("");
@@ -100,7 +100,7 @@ export default function CartPage() {
           .map((id) => {
             const quantity = cartMap[id];
 
-            
+
             if (id in DONATION_ITEMS) {
               const donationProduct = DONATION_ITEMS[id];
               return {
@@ -168,9 +168,9 @@ export default function CartPage() {
     });
   }
 
-  
+
   async function handleCopyPixCode() {
-    
+
     const code =
       pixData?.qr_code || pixData?.copyPaste || pixData?.qrCode || "";
 
@@ -190,7 +190,7 @@ export default function CartPage() {
   function handlePhoneChange(e) {
     let val = e.target.value.replace(/\D/g, "");
     if (val.length > 11) val = val.slice(0, 11);
-    
+
     if (val.length > 2) {
       val = `(${val.slice(0, 2)}) ${val.slice(2)}`;
     }
@@ -225,7 +225,7 @@ export default function CartPage() {
       }
 
       const token = await getIdTokenOrNull();
-      
+
       setSubmitting(true);
       const orderItems = items.map(({ product, quantity }) => ({
         productId: product.id,
@@ -272,7 +272,7 @@ export default function CartPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            
+
             amount: total,
             totalValue: total,
             description: "Pagamento Portal APAE – Pinhão",
@@ -360,7 +360,7 @@ export default function CartPage() {
               <p className="text-slate-600 text-lg mb-6">
                 Seu carrinho está vazio.
               </p>
-              <button 
+              <button
                 onClick={() => router.push("/products")}
                 className="inline-flex items-center justify-center px-8 py-3 rounded-full bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 hover:shadow-emerald-500/30 hover:-translate-y-0.5 transition-all"
               >
@@ -426,6 +426,7 @@ export default function CartPage() {
                             <button
                               type="button"
                               onClick={() => removeFromCart(p.id)}
+                              aria-label={`Remover ${p.name || p.title} do carrinho`}
                               className="text-red-500 hover:text-red-700 font-semibold text-xs bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors"
                             >
                               Remover
@@ -442,23 +443,26 @@ export default function CartPage() {
                 <div className="grid md:grid-cols-2 gap-8 items-start">
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1.5">
+                      <label htmlFor="pickup-name" className="block text-sm font-bold text-slate-700 mb-1.5">
                         Nome de quem vai retirar <span className="text-red-500">*</span>
                       </label>
                       <input
+                        id="pickup-name"
                         className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
                         placeholder="Ex: João da Silva"
                         value={pickupName}
                         onChange={(e) => setPickupName(e.target.value)}
                         required
+                        aria-required="true"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1.5">
+                      <label htmlFor="pickup-whatsapp" className="block text-sm font-bold text-slate-700 mb-1.5">
                         WhatsApp para contato (opcional)
                       </label>
                       <input
+                        id="pickup-whatsapp"
                         className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
                         placeholder="(00) 00000-0000"
                         value={whatsapp}
@@ -469,7 +473,7 @@ export default function CartPage() {
                   </div>
 
                   <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
-                    <div className="flex justify-between items-center pb-4 border-b border-slate-100">
+                    <div className="flex justify-between items-center pb-4 border-b border-slate-100" aria-live="polite" aria-atomic="true">
                       <span className="text-slate-600 font-medium">Total geral</span>
                       <span className="text-2xl font-extrabold text-emerald-600">{formatCurrency(total)}</span>
                     </div>
@@ -489,7 +493,7 @@ export default function CartPage() {
                         "Finalizar Pedido com PIX"
                       )}
                     </button>
-                    
+
                     <p className="text-xs text-center text-slate-400">
                       Ao finalizar, você receberá um QR Code para pagamento.
                     </p>

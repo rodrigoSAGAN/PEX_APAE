@@ -24,10 +24,10 @@ export default function LoginPage() {
       try {
         const localRaw = localStorage.getItem("portal-apae-cart");
         const token = await user.getIdToken();
-        
+
         if (localRaw) {
           const localCart = JSON.parse(localRaw);
-          
+
           const res = await fetch("/api/cart/merge", {
             method: "POST",
             headers: {
@@ -49,7 +49,7 @@ export default function LoginPage() {
               Authorization: `Bearer ${token}`,
             },
           });
-          
+
           if (res.ok) {
             const data = await res.json();
             if (data.items) {
@@ -75,8 +75,8 @@ export default function LoginPage() {
     <>
       <Nav />
       <main className="min-h-screen grid place-items-center px-4 pt-4 bg-gradient-to-br from-blue-50 to-blue-100">
-        <form 
-          onSubmit={handleLogin} 
+        <form
+          onSubmit={handleLogin}
           className="bg-white border border-slate-200 rounded-3xl p-8 shadow-2xl w-full max-w-md animate-fade-in"
         >
           <div className="text-center mb-8">
@@ -99,6 +99,8 @@ export default function LoginPage() {
               onBlur={() => setFocus((f) => ({ ...f, email: false }))}
               required
               autoComplete="email"
+              aria-required="true"
+              aria-invalid={err ? "true" : "false"}
             />
           </div>
 
@@ -117,11 +119,17 @@ export default function LoginPage() {
               onBlur={() => setFocus((f) => ({ ...f, pass: false }))}
               required
               autoComplete="current-password"
+              aria-required="true"
+              aria-invalid={err ? "true" : "false"}
             />
           </div>
 
           {err && (
-            <div className="bg-red-50 text-red-700 border border-red-200 rounded-xl p-3 mb-6 text-sm font-medium text-center">
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="bg-red-50 text-red-700 border border-red-200 rounded-xl p-3 mb-6 text-sm font-medium text-center"
+            >
               {err}
             </div>
           )}
@@ -142,14 +150,14 @@ export default function LoginPage() {
             </button>
 
             <div className="flex flex-wrap items-center justify-between gap-4 mt-2">
-              <Link 
-                href="/register" 
+              <Link
+                href="/register"
                 className="text-sm font-bold text-blue-600 hover:text-blue-700 hover:underline transition-all"
               >
                 Criar conta
               </Link>
-              <Link 
-                href="/forgot-password" 
+              <Link
+                href="/forgot-password"
                 className="text-sm font-medium text-slate-500 hover:text-slate-700 transition-all"
               >
                 Esqueci minha senha
