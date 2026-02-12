@@ -1,7 +1,7 @@
 import express from "express";
 import crypto from "crypto";
 import axios from "axios";
-import { db } from "../db/firestore.js"; // ✅ SEU CAMINHO REAL
+import { db } from "../db/firestore.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -13,7 +13,6 @@ const MP_ACCESS_TOKEN =
 
 const MP_WEBHOOK_SECRET = process.env.MP_WEBHOOK_SECRET;
 
-// ✅ Middleware para capturar body bruto (obrigatório pro webhook)
 router.post(
   "/mercadopago",
   express.raw({ type: "application/json" }),
@@ -29,7 +28,6 @@ router.post(
         return res.status(401).json({ error: "missing_signature" });
       }
 
-      // ✅ Extrair ts e hash
       const parts = xSignature.split(",");
       let ts = null;
       let hash = null;
@@ -51,7 +49,6 @@ router.post(
         return res.status(200).json({ received: true });
       }
 
-      // ✅ Validar assinatura
       const manifest = `id:${paymentId};request-id:${xRequestId};ts:${ts};`;
 
       const expectedHash = crypto
@@ -70,7 +67,6 @@ router.post(
         return res.status(200).json({ received: true });
       }
 
-      // ✅ Buscar pagamento direto na API (forma estável)
       const mpRes = await axios.get(
         `https://api.mercadopago.com/v1/payments/${paymentId}`,
         {

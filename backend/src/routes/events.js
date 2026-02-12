@@ -2,8 +2,6 @@ import { Router } from "express";
 import { db, admin } from "../db/firestore.js";
 
 const router = Router();
-
-// registra logs
  
 async function writeAuditLog({
   req,
@@ -35,7 +33,6 @@ async function writeAuditLog({
   }
 }
 
-//verifica se o usuário é ADMIN ou colaborador 
 async function requireEventsEditor(req, res, next) {
   try {
     const authHeader = req.headers.authorization || "";
@@ -68,8 +65,6 @@ async function requireEventsEditor(req, res, next) {
     return res.status(401).json({ error: "invalid_token" });
   }
 }
-
-//Lista todos os eventos
  
 router.get("/", async (_req, res) => {
   try {
@@ -92,11 +87,9 @@ router.get("/", async (_req, res) => {
   }
 });
 
-//Cria novo evento 
-
 router.post("/", requireEventsEditor, async (req, res) => {
   try {
-    const { title, date, location, description } = req.body || {};
+    const { title, date, location, description, coverImage, isFree, priceAdult, priceChild } = req.body || {};
 
     if (!title || typeof title !== "string") {
       return res.status(400).json({
@@ -112,6 +105,10 @@ router.post("/", requireEventsEditor, async (req, res) => {
       date: date || null, 
       location: location || null,
       description: description || null,
+      coverImage: coverImage || null,
+      isFree: isFree !== undefined ? Boolean(isFree) : true,
+      priceAdult: isFree ? 0 : Number(priceAdult) || 0,
+      priceChild: isFree ? 0 : Number(priceChild) || 0,
       createdAt: now,
       updatedAt: now,
       active: true,
@@ -120,7 +117,6 @@ router.post("/", requireEventsEditor, async (req, res) => {
     const created = await docRef.get();
     const data = { id: created.id, ...created.data() };
 
-    // Log de criação
     await writeAuditLog({
       req,
       type: "event",
@@ -140,11 +136,10 @@ router.post("/", requireEventsEditor, async (req, res) => {
   }
 });
 
-//Atualiza o evento 
 router.put("/:id", requireEventsEditor, async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, date, location, description, active } = req.body || {};
+    const { title, date, location, description, active, coverImage, isFree, priceAdult, priceChild } = req.body || {};
 
     const docRef = db.collection("events").doc(id);
     const snap = await docRef.get();
@@ -166,13 +161,25 @@ router.put("/:id", requireEventsEditor, async (req, res) => {
     if (typeof description === "string" || description === null)
       updateData.description = description || null;
     if (typeof active === "boolean") updateData.active = active;
+    if (typeof coverImage === "string" || coverImage === null) 
+      updateData.coverImage = coverImage || null;
+    if (typeof isFree === "boolean") {
+      updateData.isFree = isFree;
+      if (isFree) {
+        updateData.priceAdult = 0;
+        updateData.priceChild = 0;
+      }
+    }
+    if (!isFree && typeof priceAdult === "number") 
+      updateData.priceAdult = Number(priceAdult) || 0;
+    if (!isFree && typeof priceChild === "number") 
+      updateData.priceChild = Number(priceChild) || 0;
 
     await docRef.update(updateData);
 
     const updated = await docRef.get();
     const afterData = { id: updated.id, ...updated.data() };
 
-    //Log de atualização
     await writeAuditLog({
       req,
       type: "event",
@@ -192,7 +199,6 @@ router.put("/:id", requireEventsEditor, async (req, res) => {
   }
 });
 
-//Remove evento 
 router.delete("/:id", requireEventsEditor, async (req, res) => {
   try {
     const { id } = req.params;
@@ -208,7 +214,6 @@ router.delete("/:id", requireEventsEditor, async (req, res) => {
 
     await docRef.delete();
 
-    //Log de exclusão
     await writeAuditLog({
       req,
       type: "event",
@@ -228,4 +233,157 @@ router.delete("/:id", requireEventsEditor, async (req, res) => {
   }
 });
 
+router.post("/simulate-reservation", requireEventsEditor, async (req, res) => {
+  try {
+    const { eventId, adultQuantity, childQuantity, reservationName } = req.body || {};
+
+    if (!eventId) {
+      return res.status(400).json({ error: "eventId is required" });
+    }
+
+    if ((!adultQuantity || adultQuantity === 0) && (!childQuantity || childQuantity === 0)) {
+      return res.status(400).json({ error: "At least one quantity must be greater than 0" });
+    }
+
+    if (!reservationName || !reservationName.trim()) {
+      return res.status(400).json({ error: "reservationName is required" });
+    }
+
+    const eventDoc = await db.collection("events").doc(eventId).get();
+    if (!eventDoc.exists) {
+      return res.status(404).json({ error: "Event not found" });
+    }
+
+    const event = { id: eventDoc.id, ...eventDoc.data() };
+    const items = [];
+    let totalValue = 0;
+
+    if (adultQuantity && adultQuantity > 0) {
+      const adultPrice = event.isFree ? 0 : (Number(event.priceAdult) || 0);
+      items.push({
+        id: `event-${eventId}`,
+        name: `${event.title} - Adulto`,
+        quantity: Number(adultQuantity),
+        price: adultPrice,
+        category: "Evento",
+        reservationName: reservationName.trim(),
+        eventId: eventId,
+        eventTitle: event.title,
+        eventDate: event.date,
+        isEventItem: true,
+      });
+      totalValue += adultPrice * Number(adultQuantity);
+    }
+
+    if (childQuantity && childQuantity > 0) {
+      const childPrice = event.isFree ? 0 : (Number(event.priceChild) || 0);
+      items.push({
+        id: `event-${eventId}-child`,
+        name: `${event.title} - Criança`,
+        quantity: Number(childQuantity),
+        price: childPrice,
+        category: "Evento",
+        reservationName: reservationName.trim(),
+        eventId: eventId,
+        eventTitle: event.title,
+        eventDate: event.date,
+        isEventItem: true,
+      });
+      totalValue += childPrice * Number(childQuantity);
+    }
+
+    const orderRef = await db.collection("orders").add({
+      items,
+      totalValue,
+      userEmail: req.user.email || "simulator@test.com",
+      userId: req.user.uid || null,
+      pickupName: reservationName.trim(),
+      createdAt: admin.firestore.Timestamp.fromDate(new Date()),
+      status: "paid",
+      delivered: true,
+      paymentMethod: "simulated",
+      isSimulated: true,
+    });
+
+    await writeAuditLog({
+      req,
+      type: "event-reservation",
+      action: "simulate",
+      entityId: orderRef.id,
+      entityName: `${event.title} - ${reservationName}`,
+      before: null,
+      after: { orderId: orderRef.id, eventId, items, totalValue },
+    });
+
+    res.json({ ok: true, orderId: orderRef.id, items, totalValue });
+  } catch (e) {
+    console.error("POST /api/events/simulate-reservation error:", e);
+    res.status(500).json({ error: "internal_error", message: e.message });
+  }
+});
+
+router.get("/reservations", requireEventsEditor, async (req, res) => {
+  try {
+    const ordersSnap = await db
+      .collection("orders")
+      .where("status", "==", "paid")
+      .get();
+
+    const eventReservations = {};
+
+    ordersSnap.docs.forEach((doc) => {
+      const order = { id: doc.id, ...doc.data() };
+      const items = Array.isArray(order.items) ? order.items : [];
+
+      items.forEach((item) => {
+        if (item.id && item.id.startsWith("event-")) {
+          const eventId = item.eventId || item.id.replace("event-", "").replace("-child", "");
+          const isChild = item.id.includes("-child");
+          const type = isChild ? "Criança" : "Adulto";
+
+          if (!eventReservations[eventId]) {
+            eventReservations[eventId] = {
+              eventId,
+              eventTitle: item.eventTitle || item.name || "Evento",
+              eventDate: item.eventDate || null,
+              reservations: [],
+              totalAdults: 0,
+              totalChildren: 0,
+              totalValue: 0,
+            };
+          }
+
+          const reservation = {
+            orderId: order.id,
+            responsibleName: item.reservationName || order.pickupName || "Anônimo",
+            customerName: order.userEmail || order.pickupName || "Anônimo",
+            type,
+            quantity: item.quantity || 0,
+            unitPrice: item.price || 0,
+            totalValue: (item.quantity || 0) * (item.price || 0),
+            date: order.createdAt?.toDate?.() || order.createdAt || null,
+          };
+
+          eventReservations[eventId].reservations.push(reservation);
+          
+          if (isChild) {
+            eventReservations[eventId].totalChildren += item.quantity || 0;
+          } else {
+            eventReservations[eventId].totalAdults += item.quantity || 0;
+          }
+          
+          eventReservations[eventId].totalValue += reservation.totalValue;
+        }
+      });
+    });
+
+    const result = Object.values(eventReservations);
+    res.json(result);
+  } catch (e) {
+    console.error("GET /api/events/reservations error:", e);
+    res.status(500).json({ error: "internal_error", message: e.message });
+  }
+});
+
 export default router;
+

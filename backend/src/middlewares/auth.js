@@ -1,9 +1,5 @@
-
-
-// IMPORTA o admin de src/db/firestore.js
 import admin from "../db/firestore.js";
 
-//autorizaçao
 export async function auth(req, res, next) {
   const authHeader = req.headers.authorization || "";
 
@@ -14,10 +10,8 @@ export async function auth(req, res, next) {
   const token = authHeader.split(" ")[1];
 
   try {
-    // Valida o ID token do Firebase
     const decoded = await admin.auth().verifyIdToken(token);
 
-    // Anexa os dados do usuário 
     req.user = {
       uid: decoded.uid,
       email: decoded.email || null,

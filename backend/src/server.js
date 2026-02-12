@@ -4,7 +4,6 @@ import path from "path";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 
-// Rotas
 import healthRouter from "./routes/health.js";
 import productsRouter from "./routes/products.js";
 import usersRouter from "./routes/users.js";
@@ -32,19 +31,13 @@ const app = express();
 
 app.use(cors());
 
-/**
- * ✅ Webhook ANTES do JSON
- */
 app.use("/webhook", webhookRouter);
 
-// ✅ JSON depois
 app.use(express.json());
 
-// ✅ Uploads
 const uploadsPath = path.join(rootDir, "..", "uploads");
 app.use("/uploads", express.static(uploadsPath));
 
-// ✅ Rotas
 app.use("/api/health", healthRouter);
 app.use("/api/products", productsRouter);
 app.use("/api/users", usersRouter);

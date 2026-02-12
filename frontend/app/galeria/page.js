@@ -653,21 +653,15 @@ export default function GaleriaPage() {
                     style={card}
                     onClick={() => it.imageUrl && setZoomItem(it)}
                   >
-                    {it.imageUrl ? (
-                      <img src={it.imageUrl} alt={it.title} style={imgBox} />
-                    ) : (
-                      <div
-                        style={{
-                          ...imgBox,
-                          display: "grid",
-                          placeItems: "center",
-                          color: "#94a3b8",
-                          fontSize: 12,
+                      <img
+                        src={it.imageUrl || "/images/imagem-erro.jpeg"}
+                        alt={it.title}
+                        style={imgBox}
+                        onError={(e) => {
+                          e.currentTarget.src = "/images/imagem-erro.jpeg";
+                          e.currentTarget.onerror = null;
                         }}
-                      >
-                        Sem imagem
-                      </div>
-                    )}
+                      />
 
                     <div style={cardBody}>
                       <div style={cardTitleStyle} title={it.title}>
@@ -690,6 +684,10 @@ export default function GaleriaPage() {
                   src={zoomItem.imageUrl}
                   alt={zoomItem.title}
                   style={modalImg}
+                  onError={(e) => {
+                    e.currentTarget.src = "/images/imagem-erro.jpeg";
+                    e.currentTarget.onerror = null;
+                  }}
                 />
               </div>
 

@@ -11,7 +11,6 @@ export default function DonationModal({ isOpen, onClose, donationValue, donation
   const modalRef = useRef(null);
   const previousFocusRef = useRef(null);
 
-  // Focus management
   useEffect(() => {
     if (isOpen) {
       previousFocusRef.current = document.activeElement;
@@ -24,7 +23,6 @@ export default function DonationModal({ isOpen, onClose, donationValue, donation
     }
   }, [isOpen]);
 
-  // Escape key handler
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === 'Escape' && isOpen) {
@@ -35,7 +33,6 @@ export default function DonationModal({ isOpen, onClose, donationValue, donation
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
-  // Focus trap
   useEffect(() => {
     if (!isOpen) return;
 

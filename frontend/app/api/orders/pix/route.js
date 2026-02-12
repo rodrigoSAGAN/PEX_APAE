@@ -30,7 +30,6 @@ export async function POST(request) {
       );
     }
 
-    // retorna para o client o id do qrCode...
     return NextResponse.json(data, { status: 200 });
   } catch (e) {
     console.error("[api/pix] erro inesperado:", e);

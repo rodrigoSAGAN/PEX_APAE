@@ -32,7 +32,6 @@
     background-size: cover;
   }
 
-  /* WCAG 2.1 AA Focus Styles */
   *:focus-visible {
     outline: 3px solid #2563eb;
     outline-offset: 2px;
@@ -47,7 +46,6 @@
     outline-offset: 2px;
   }
 
-  /* Skip to content link */
   .skip-to-content {
     position: absolute;
     top: -100px;

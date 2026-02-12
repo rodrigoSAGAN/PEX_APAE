@@ -38,6 +38,7 @@ export default function ProductsPage() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [stream, setStream] = useState(null);
+  const [readyToPersist, setReadyToPersist] = useState(false);
 
   const API = "/api/products";
 
@@ -55,10 +56,13 @@ export default function ProductsPage() {
         "[products] não foi possível ler o carrinho do localStorage:",
         e
       );
+    } finally {
+      setReadyToPersist(true);
     }
   }, []);
 
   useEffect(() => {
+    if (!readyToPersist) return;
     try {
       localStorage.setItem("portal-apae-cart", JSON.stringify(cart));
     } catch (e) {
@@ -67,7 +71,7 @@ export default function ProductsPage() {
         e
       );
     }
-  }, [cart]);
+  }, [cart, readyToPersist]);
 
   useEffect(() => {
     return () => {
@@ -78,6 +82,11 @@ export default function ProductsPage() {
   }, [stream]);
 
   function addToCart(product) {
+    if (claims) {
+      showModal("Faça logout para realizar compras.", "Acesso Restrito");
+      return;
+    }
+
     const newQ = (cart[product.id] || 0) + 1;
     const rawStock = product.stock ?? 0;
     const stockNumber =
@@ -91,19 +100,6 @@ export default function ProductsPage() {
     const newCart = { ...cart, [product.id]: newQ };
     setCart(newCart);
     localStorage.setItem("portal-apae-cart", JSON.stringify(newCart));
-
-    if (auth.currentUser) {
-      auth.currentUser.getIdToken().then((token) => {
-        fetch("/api/cart", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ items: newCart }),
-        }).catch((err) => console.error("Erro ao salvar carrinho remoto:", err));
-      });
-    }
 
     router.push("/carrinho");
   }
@@ -290,6 +286,11 @@ export default function ProductsPage() {
   const showSidebar = !isMobile && claims;
 
   function handleQuickAdd(product) {
+    if (claims) {
+      showModal("Faça logout para realizar compras.", "Acesso Restrito");
+      return;
+    }
+
     const newQ = (cart[product.id] || 0) + 1;
     const rawStock = product.stock ?? 0;
     const stockNumber =
@@ -303,22 +304,14 @@ export default function ProductsPage() {
     const newCart = { ...cart, [product.id]: newQ };
     setCart(newCart);
     localStorage.setItem("portal-apae-cart", JSON.stringify(newCart));
-
-    if (auth.currentUser) {
-      auth.currentUser.getIdToken().then((token) => {
-        fetch("/api/cart", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ items: newCart }),
-        }).catch((err) => console.error("Erro ao salvar carrinho remoto:", err));
-      });
-    }
   }
 
   function handleDecrease(product) {
+    if (claims) {
+      showModal("Faça logout para realizar compras.", "Acesso Restrito");
+      return;
+    }
+
     const currentQ = cart[product.id] || 0;
     if (currentQ <= 0) return;
 
@@ -334,19 +327,6 @@ export default function ProductsPage() {
 
     setCart(newCart);
     localStorage.setItem("portal-apae-cart", JSON.stringify(newCart));
-
-    if (auth.currentUser) {
-      auth.currentUser.getIdToken().then((token) => {
-        fetch("/api/cart", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ items: newCart }),
-        }).catch((err) => console.error("Erro ao salvar carrinho remoto:", err));
-      });
-    }
   }
 
   async function startCamera() {
@@ -356,7 +336,6 @@ export default function ProductsPage() {
         return;
       }
 
-      // Verifica se existem dispositivos de vídeo antes de tentar abrir
       try {
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter((device) => device.kind === "videoinput");
@@ -366,7 +345,6 @@ export default function ProductsPage() {
         }
       } catch (e) {
         console.warn("Erro ao listar dispositivos:", e);
-        // Continua mesmo se falhar ao listar, para tentar getUserMedia direto
       }
 
       let mediaStream;
@@ -453,35 +431,60 @@ export default function ProductsPage() {
             </h2>
 
             <div className="flex flex-wrap items-center justify-between gap-4 mb-8 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
                 <span className="text-sm font-semibold text-slate-600">
                   Filtrar por classe:
                 </span>
-                <select
-                  value={filterClass}
-                  onChange={(e) => setFilterClass(e.target.value)}
-                  className="px-4 py-2 rounded-full border border-slate-200 bg-white text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all cursor-pointer hover:border-emerald-300"
-                >
-                  <option value="all">Todas</option>
-                  <option value="artigos">Artigos</option>
-                  <option value="cozinha">Cozinha</option>
-                </select>
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => setFilterClass("all")}
+                    className={`px-5 py-2 rounded-full text-sm font-semibold transition-all shadow-sm ${
+                      filterClass === "all"
+                        ? "bg-emerald-500 text-white shadow-emerald-200"
+                        : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:border-emerald-300"
+                    }`}
+                  >
+                    Todas
+                  </button>
+                  <button
+                    onClick={() => setFilterClass("artigos")}
+                    className={`px-5 py-2 rounded-full text-sm font-semibold transition-all shadow-sm ${
+                      filterClass === "artigos"
+                        ? "bg-emerald-500 text-white shadow-emerald-200"
+                        : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:border-emerald-300"
+                    }`}
+                  >
+                    Artigos
+                  </button>
+                  <button
+                    onClick={() => setFilterClass("cozinha")}
+                    className={`px-5 py-2 rounded-full text-sm font-semibold transition-all shadow-sm ${
+                      filterClass === "cozinha"
+                        ? "bg-emerald-500 text-white shadow-emerald-200"
+                        : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:border-emerald-300"
+                    }`}
+                  >
+                    Cozinha
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-4">
-                <div className="text-sm text-slate-600">
-                  Itens no carrinho:{" "}
-                  <strong className="text-emerald-600 text-base ml-1">
-                    {Object.values(cart).reduce((acc, n) => acc + n, 0)}
-                  </strong>
+              {!claims && (
+                <div className="flex items-center gap-4">
+                  <div className="text-sm text-slate-600">
+                    Itens no carrinho:{" "}
+                    <strong className="text-emerald-600 text-base ml-1">
+                      {Object.values(cart).reduce((acc, n) => acc + n, 0)}
+                    </strong>
+                  </div>
+                  <Link
+                    href="/carrinho"
+                    className="inline-flex items-center justify-center px-6 py-2.5 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-bold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300"
+                  >
+                    Ver carrinho
+                  </Link>
                 </div>
-                <Link
-                  href="/carrinho"
-                  className="inline-flex items-center justify-center px-6 py-2.5 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-bold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300"
-                >
-                  Ver carrinho
-                </Link>
-              </div>
+              )}
             </div>
 
             {canEdit && (
@@ -563,7 +566,6 @@ export default function ProductsPage() {
                       </button>
                     </div>
 
-                    {/* Camera Preview Area */}
                     {showCamera && (
                       <div className="mt-4 p-4 bg-slate-100 rounded-xl border border-slate-200 flex flex-col items-center gap-4">
                         <div className="relative w-full max-w-sm aspect-video bg-black rounded-lg overflow-hidden">
@@ -633,6 +635,10 @@ export default function ProductsPage() {
                       src={imagePreview}
                       alt="Pré-visualização"
                       className="w-24 h-24 object-cover rounded-xl border border-slate-200 mx-auto shadow-sm"
+                      onError={(e) => {
+                        e.currentTarget.src = "/images/imagem-erro.jpeg";
+                        e.currentTarget.onerror = null;
+                      }}
                     />
                   </div>
                 )}
@@ -695,17 +701,15 @@ export default function ProductsPage() {
                       className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden"
                     >
                       <div className="relative w-full pt-[75%] bg-slate-50 overflow-hidden">
-                        {p.imageUrl ? (
-                          <img
-                            src={p.imageUrl}
-                            alt={p.name || p.title || "Produto"}
-                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                          />
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center text-slate-400 bg-slate-100 text-sm font-medium">
-                            Sem imagem
-                          </div>
-                        )}
+                        <img
+                          src={p.imageUrl || "/images/imagem-erro.jpeg"}
+                          alt={p.name || p.title || "Produto"}
+                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          onError={(e) => {
+                            e.currentTarget.src = "/images/imagem-erro.jpeg";
+                            e.currentTarget.onerror = null;
+                          }}
+                        />
 
                         <div className="absolute top-3 right-3 z-10">
                           <span
@@ -718,7 +722,7 @@ export default function ProductsPage() {
                           </span>
                         </div>
 
-                        {qtyInCart > 0 && (
+                        {qtyInCart > 0 && !claims && (
                           <div className="absolute top-3 left-3 z-10 animate-in fade-in zoom-in duration-300">
                             <span className="bg-emerald-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-md flex items-center gap-1">
                               {qtyInCart}
@@ -726,7 +730,7 @@ export default function ProductsPage() {
                           </div>
                         )}
 
-                        {!isOutOfStock && (
+                        {!isOutOfStock && !claims && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -795,64 +799,68 @@ export default function ProductsPage() {
                         </div>
 
                         <div className="flex flex-col gap-3 mt-2">
-                          {isOutOfStock ? (
-                            <button
-                              disabled
-                              className="w-full py-2.5 rounded-xl bg-slate-200 text-slate-500 font-bold text-sm cursor-not-allowed"
-                            >
-                              Esgotado
-                            </button>
-                          ) : (
-                            <div className="grid grid-cols-2 gap-2">
-                              {qtyInCart > 0 ? (
-                                <div className="flex items-center justify-between bg-slate-50 rounded-xl border border-slate-200 px-1">
+                          {!claims && (
+                            <>
+                              {isOutOfStock ? (
+                                <button
+                                  disabled
+                                  className="w-full py-2.5 rounded-xl bg-slate-200 text-slate-500 font-bold text-sm cursor-not-allowed"
+                                >
+                                  Esgotado
+                                </button>
+                              ) : (
+                                <div className="grid grid-cols-2 gap-2">
+                                  {qtyInCart > 0 ? (
+                                    <div className="flex items-center justify-between bg-slate-50 rounded-xl border border-slate-200 px-1">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDecrease(p);
+                                        }}
+                                        className="w-8 h-full grid place-items-center text-amber-700 hover:bg-slate-100 rounded-l-md transition-colors"
+                                      >
+                                        -
+                                      </button>
+                                      <span className="text-sm font-bold text-slate-800">
+                                        {qtyInCart}
+                                      </span>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleQuickAdd(p);
+                                        }}
+                                        className="w-8 h-full grid place-items-center text-emerald-700 hover:bg-slate-100 rounded-r-md transition-colors"
+                                      >
+                                        +
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleQuickAdd(p);
+                                        showModal(
+                                          "Produto adicionado ao carrinho!",
+                                          "Sucesso"
+                                        );
+                                      }}
+                                      className="py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-sm hover:bg-slate-50 hover:border-slate-300 transition-colors"
+                                    >
+                                      + Carrinho
+                                    </button>
+                                  )}
+
                                   <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDecrease(p);
-                                    }}
-                                    className="w-8 h-full grid place-items-center text-amber-700 hover:bg-slate-100 rounded-l-md transition-colors"
+                                    type="button"
+                                    onClick={() => addToCart(p)}
+                                    className="py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm shadow-md shadow-emerald-200 hover:bg-emerald-700 hover:shadow-lg hover:-translate-y-0.5 transition-all"
                                   >
-                                    -
-                                  </button>
-                                  <span className="text-sm font-bold text-slate-800">
-                                    {qtyInCart}
-                                  </span>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleQuickAdd(p);
-                                    }}
-                                    className="w-8 h-full grid place-items-center text-emerald-700 hover:bg-slate-100 rounded-r-md transition-colors"
-                                  >
-                                    +
+                                    Comprar
                                   </button>
                                 </div>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleQuickAdd(p);
-                                    showModal(
-                                      "Produto adicionado ao carrinho!",
-                                      "Sucesso"
-                                    );
-                                  }}
-                                  className="py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-sm hover:bg-slate-50 hover:border-slate-300 transition-colors"
-                                >
-                                  + Carrinho
-                                </button>
                               )}
-
-                              <button
-                                type="button"
-                                onClick={() => addToCart(p)}
-                                className="py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm shadow-md shadow-emerald-200 hover:bg-emerald-700 hover:shadow-lg hover:-translate-y-0.5 transition-all"
-                              >
-                                Comprar
-                              </button>
-                            </div>
+                            </>
                           )}
 
                           {canEdit && (
@@ -895,6 +903,30 @@ export default function ProductsPage() {
               </div>
             )}
           </div>
+          {Object.values(cart).reduce((acc, n) => acc + n, 0) > 0 && !claims && (
+            <Link
+              href="/carrinho"
+              className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-8 py-4 bg-emerald-600 text-white rounded-full shadow-2xl hover:bg-emerald-700 hover:scale-105 transition-all duration-300 font-bold text-lg animate-in slide-in-from-bottom-10 fade-in cursor-pointer group"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="group-hover:-translate-x-1 transition-transform"
+              >
+                <circle cx="8" cy="21" r="1" />
+                <circle cx="19" cy="21" r="1" />
+                <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+              </svg>
+              ver carrinho
+            </Link>
+          )}
         </main>
       </div>
     </>

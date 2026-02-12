@@ -154,7 +154,7 @@ export default function DashboardPage() {
               <div>
                 <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
                 <p className="text-slate-600 mt-2">
-                  Visão geral da Lojinha APAE – Pinhão e eventos.
+                  Visão geral da loja APAE – Pinhão e eventos.
                 </p>
               </div>
 

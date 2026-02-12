@@ -17,7 +17,6 @@ export function ModalProvider({ children }) {
   const modalRef = useRef(null);
   const previousFocusRef = useRef(null);
 
-  // Focus management
   useEffect(() => {
     if (modal.isOpen) {
       previousFocusRef.current = document.activeElement;
@@ -31,7 +30,6 @@ export function ModalProvider({ children }) {
     }
   }, [modal.isOpen]);
 
-  // Escape key handler
   useEffect(() => {
     if (!modal.isOpen) return;
 
@@ -48,7 +46,6 @@ export function ModalProvider({ children }) {
     return () => document.removeEventListener('keydown', handleEscape);
   }, [modal.isOpen, modal.onCancel]);
 
-  // Focus trap
   useEffect(() => {
     if (!modal.isOpen) return;
 

@@ -211,7 +211,7 @@ export default function NavbarUser({ user, handleLogout }) {
             <Link href="/products" style={menuItem}>{icons.shop} Loja</Link>
             <Link href="/events" style={menuItem}>{icons.events} Eventos</Link>
 
-            {hasCartItems && (
+            {hasCartItems && !user && (
               <Link href="/carrinho" style={menuItem}>{icons.cart} Ver carrinho</Link>
             )}
 
@@ -255,7 +255,7 @@ export default function NavbarUser({ user, handleLogout }) {
             {icons.events} Eventos
           </Link>
 
-          {hasCartItems && (
+          {hasCartItems && !user && (
             <Link href="/carrinho" style={mobileLink} onClick={() => setMenuOpen(false)}>
               {icons.cart} Ver carrinho
             </Link>

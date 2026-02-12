@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { auth } from "../lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import NavbarAdmin from "./navbar/NavbarAdmin";
@@ -7,12 +8,12 @@ import NavbarUser from "./navbar/NavbarUser";
 import { useModal } from "./ModalContext";
 
 export default function Nav() {
+  const router = useRouter();
   const { showModal } = useModal();
   const [user, setUser] = useState(null);
   const [claims, setClaims] = useState(null);
   const [authReady, setAuthReady] = useState(false);
 
-  // auth
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       setUser(u || null);
@@ -31,7 +32,14 @@ export default function Nav() {
 
   async function handleLogout() {
     try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("portal-apae-cart");
+        localStorage.removeItem("portal-apae-cart-meta");
+      }
+      
       await signOut(auth);
+      
+      router.push("/");
     } catch (e) {
       console.error("Erro ao sair:", e);
       showModal("Não foi possível sair. Tente novamente.", "Erro");

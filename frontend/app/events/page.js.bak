@@ -30,12 +30,14 @@ export default function EventsPage() {
  const [canEditEvents, setCanEditEvents] = useState(false);
  const [claims, setClaims] = useState(null);
  
+ // Estados para modal de reserva
  const [showReserveModal, setShowReserveModal] = useState(false);
  const [selectedEvent, setSelectedEvent] = useState(null);
  const [adultQuantity, setAdultQuantity] = useState(0);
  const [childQuantity, setChildQuantity] = useState(0);
  const [reservationName, setReservationName] = useState("");
  
+ // Estados para modal de simulação
  const [showSimulateModal, setShowSimulateModal] = useState(false);
  const [simulateEventId, setSimulateEventId] = useState("");
  const [simulateAdultQty, setSimulateAdultQty] = useState(0);
@@ -111,6 +113,7 @@ export default function EventsPage() {
  
      let uploadedImageUrl = form.coverImage || null;
  
+     // Se há um arquivo de imagem selecionado, fazer upload
      if (imageFile) {
        const formData = new FormData();
        formData.append("image", imageFile);
@@ -164,7 +167,7 @@ export default function EventsPage() {
        return showModal(msg, "Erro");
      }
  
-      setForm({ title: "", date: "", location: "", description: "", coverImage: "", isFree: true, priceAdult: 0, priceChild: 0 });
+     setForm({ title: "", date: "", location: "", description: "", coverImage: "" });
      setEditing(null);
      setImageFile(null);
      setImagePreview(null);
@@ -187,6 +190,7 @@ export default function EventsPage() {
    }
  }
  
+ // Funções para modal de reserva
  function openReserveModal(event) {
    setSelectedEvent(event);
    setAdultQuantity(0);
@@ -220,6 +224,7 @@ export default function EventsPage() {
  }
  
  function handleReserveCheckout() {
+   // Block authenticated users
    if (canEditEvents) {
      showModal("Faça logout para fazer reservas.", "Acesso Restrito");
      return;
@@ -250,6 +255,7 @@ export default function EventsPage() {
        meta = JSON.parse(rawMeta);
      }
  
+     // Adicionar reserva ADULTO se houver
      if (adultQuantity > 0) {
        const adultId = `event-${selectedEvent.id}`;
        cart[adultId] = (cart[adultId] || 0) + adultQuantity;
@@ -257,6 +263,7 @@ export default function EventsPage() {
        meta[adultId].reservationName = reservationName.trim();
      }
  
+     // Adicionar reserva CRIANÇA se houver
      if (childQuantity > 0) {
        const childId = `event-${selectedEvent.id}-child`;
        cart[childId] = (cart[childId] || 0) + childQuantity;
@@ -489,11 +496,12 @@ export default function EventsPage() {
                }
                placeholder="Detalhes sobre o evento, horário, atividades, etc."
              />
+             {/* Preços */}
              <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
                <label className="flex items-center gap-2 mb-4 cursor-pointer">
                  <input
                    type="checkbox"
-                   checked={!!form.isFree}
+                   checked={form.isFree}
                    onChange={(e) => setForm(f => ({ ...f, isFree: e.target.checked }))}
                    className="w-5 h-5 rounded text-blue-600 focus:ring-blue-500 border-gray-300"
                  />
@@ -534,6 +542,7 @@ export default function EventsPage() {
                )}
              </div>
  
+             {/* Campo de upload de imagem */}
              <div className="mb-6">
                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2" htmlFor="coverImage">
                  Imagem de Capa (opcional)
@@ -620,9 +629,10 @@ export default function EventsPage() {
                  <div key={ev.id} className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden">
                    <div className="h-2 bg-gradient-to-r from-blue-500 to-indigo-500"></div>
  
+                   {/* Imagem de capa do evento */}
                    <div className="relative h-48 w-full overflow-hidden bg-slate-100">
                      <img
-                       src={ev.coverImage || "/images/imagem-erro.jpeg"}
+                       src={ev.coverImage || "http://localhost:5000/uploads/products/imgerro.png"}
                        alt={ev.title || "Evento"}
                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                        onError={(e) => {
@@ -671,6 +681,7 @@ export default function EventsPage() {
                        </p>
                      )}
  
+                     {/* Botão Reserve Agora - apenas para visitantes */}
                      {!canEditEvents && (
                        <button
                          type="button"
@@ -742,12 +753,13 @@ export default function EventsPage() {
          </p>
        </main>
  
+       {/* Modal de Reserva */}
        {showReserveModal && selectedEvent && (
          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-zoom-in">
              <div className="relative h-40 bg-slate-100">
                <img
-                 src={selectedEvent.coverImage || "/images/imagem-erro.jpeg"}
+                 src={selectedEvent.coverImage || "http://localhost:5000/uploads/products/imgerro.png"}
                  alt={selectedEvent.title}
                  className="w-full h-full object-cover"
                  onError={(e) => {
@@ -796,6 +808,7 @@ export default function EventsPage() {
                </div>
  
                <div className="space-y-6">
+                 {/* Controle de Quantidade - ADULTO */}
                  <div>
                    <label className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
                      <span>Adulto</span>
@@ -826,6 +839,7 @@ export default function EventsPage() {
                    </div>
                  </div>
  
+                 {/* Controle de Quantidade - CRIANÇA */}
                  <div>
                    <label className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 items-center">
                      <div className="flex items-center gap-2">
@@ -877,6 +891,7 @@ export default function EventsPage() {
          </div>
        )}
  
+       {/* Modal de Simulação de Reserva (TESTE) */}
        {showSimulateModal && (
          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
            <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 animate-fade-in">

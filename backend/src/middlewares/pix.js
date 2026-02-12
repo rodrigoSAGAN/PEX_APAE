@@ -3,7 +3,6 @@ import mercadopago from "mercadopago";
 
 const router = Router();
 
-// Configura o SDK do Mercado Pago com o ACCESS TOKEN de teste
 mercadopago.configure({
   access_token: process.env.MP_ACCESS_TOKEN,
 });

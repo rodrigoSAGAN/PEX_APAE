@@ -3,7 +3,6 @@ import { db, admin } from "../db/firestore.js";
 
 const router = Router();
 
-// Middleware duplicado de orders.js para evitar refatoração de arquivos existentes
 async function requireDashboardAccess(req, res, next) {
   try {
     const authHeader = req.headers.authorization || "";
@@ -43,7 +42,6 @@ async function requireDashboardAccess(req, res, next) {
   }
 }
 
-// GET /sales?month=MM&year=YYYY
 router.get("/", requireDashboardAccess, async (req, res) => {
   try {
     const { month, year } = req.query;
@@ -55,10 +53,8 @@ router.get("/", requireDashboardAccess, async (req, res) => {
       const y = parseInt(year, 10);
 
       if (!isNaN(m) && !isNaN(y)) {
-        // Mês em JS é 0-indexado (0 = Janeiro, 11 = Dezembro)
-        // Mas a UI deve mandar 1-12. Então subtraímos 1.
         const start = new Date(y, m - 1, 1);
-        const end = new Date(y, m, 1); // Primeiro dia do próximo mês
+        const end = new Date(y, m, 1);
 
         const startTs = admin.firestore.Timestamp.fromDate(start);
         const endTs = admin.firestore.Timestamp.fromDate(end);
@@ -69,7 +65,6 @@ router.get("/", requireDashboardAccess, async (req, res) => {
       }
     }
 
-    // Ordenação
     query = query.orderBy("createdAt", "desc");
 
     const snap = await query.get();
@@ -98,12 +93,8 @@ router.get("/", requireDashboardAccess, async (req, res) => {
   }
 });
 
-// GET /sales/by-month
 router.get("/by-month", requireDashboardAccess, async (req, res) => {
   try {
-    // Busca todos os pedidos. 
-    // Em produção com muitos dados, isso deveria ser paginado ou agregado via Cloud Functions.
-    // Como solicitado, buscamos tudo.
     const snap = await db.collection("orders").orderBy("createdAt", "desc").get();
 
     const grouped = {};
@@ -120,7 +111,6 @@ router.get("/by-month", requireDashboardAccess, async (req, res) => {
 
       if (dateObj) {
         const year = dateObj.getFullYear().toString();
-        // PadStart para garantir "01", "02", etc.
         const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
 
         if (!grouped[year]) {

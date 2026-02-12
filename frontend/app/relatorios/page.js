@@ -7,13 +7,12 @@ import { useRouter } from "next/navigation";
 import Nav from "../../components/Nav";
 import SideMenu from "../../components/SideMenu";
 
-
 const formatCurrency = (v) =>
   typeof v === "number"
     ? v.toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    })
+        style: "currency",
+        currency: "BRL",
+      })
     : "R$ 0,00";
 
 export default function RelatoriosPage() {
@@ -22,20 +21,18 @@ export default function RelatoriosPage() {
   const [ready, setReady] = useState(false);
   const [claims, setClaims] = useState(null);
 
-
   const [loadingSummary, setLoadingSummary] = useState(true);
   const [summary, setSummary] = useState({
     totalOrders: 0,
     totalSold: 0,
     totalRevenue: 0,
+    totalDonations: 0,
   });
-
 
   const [logs, setLogs] = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
   const [expandedLogs, setExpandedLogs] = useState(new Set());
-
 
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
@@ -44,7 +41,6 @@ export default function RelatoriosPage() {
   const [reportData, setReportData] = useState(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState("");
-
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -70,7 +66,6 @@ export default function RelatoriosPage() {
     return () => unsub();
   }, [router]);
 
-
   useEffect(() => {
     if (!ready) return;
 
@@ -91,6 +86,7 @@ export default function RelatoriosPage() {
             totalOrders: Number(d.totalOrders || 0),
             totalSold: Number(d.totalSold || 0),
             totalRevenue: Number(d.totalRevenue || 0),
+            totalDonations: Number(d.totalDonations || 0),
           });
         }
       } catch (err) {
@@ -126,7 +122,6 @@ export default function RelatoriosPage() {
     loadLogs();
   }, [ready]);
 
-
   const handleGenerateReport = async () => {
     try {
       setReportError("");
@@ -159,10 +154,120 @@ export default function RelatoriosPage() {
     }
   };
 
+  const handleDownloadPDF = async () => {
+    if (!reportData || !Array.isArray(reportData) || reportData.length === 0) {
+      alert("Nenhum dado disponível para gerar o PDF. Gere um relatório primeiro.");
+      return;
+    }
+
+    try {
+      const jsPDF = (await import("jspdf")).default;
+      const autoTable = (await import("jspdf-autotable")).default;
+
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      doc.setFontSize(18);
+      doc.setFont(undefined, "bold");
+      doc.text("APAE - Pinhão", pageWidth / 2, 15, { align: "center" });
+
+      doc.setFontSize(14);
+      doc.text("Relatório Completo de Vendas", pageWidth / 2, 25, { align: "center" });
+
+      doc.setFontSize(10);
+      doc.setFont(undefined, "normal");
+      const monthName = new Date(Number(year), Number(month) - 1).toLocaleDateString("pt-BR", {
+        month: "long",
+        year: "numeric",
+      });
+      doc.text(`Período: ${monthName}`, pageWidth / 2, 32, { align: "center" });
+
+      let yPosition = 45;
+
+      reportData.forEach((order, index) => {
+        if (yPosition > 250) {
+          doc.addPage();
+          yPosition = 20;
+        }
+
+        doc.setFontSize(12);
+        doc.setFont(undefined, "bold");
+        const orderLabel = order.isDonation ? "Doação" : "Pedido";
+        doc.text(`${orderLabel} n${index + 1}`, 14, yPosition);
+
+        doc.setFontSize(9);
+        doc.setFont(undefined, "normal");
+        doc.text(`Data: ${new Date(order.createdAt).toLocaleDateString("pt-BR")}`, 14, yPosition + 5);
+        doc.text(`Cliente: ${order.pickupName || order.userEmail || "Anônimo"}`, 14, yPosition + 10);
+
+        yPosition += 18;
+
+        const items = Array.isArray(order.items) ? order.items : [];
+
+        if (items.length > 0) {
+          const tableData = items.map((item) => [
+            item.name || item.title || "Item sem nome",
+            item.quantity || item.qty || 1,
+            formatCurrency(item.price || item.unitPrice || 0),
+            formatCurrency((item.quantity || item.qty || 1) * (item.price || item.unitPrice || 0)),
+          ]);
+
+          autoTable(doc, {
+            startY: yPosition,
+            head: [["Item", "Qtd", "Valor Unitário", "Subtotal"]],
+            body: tableData,
+            theme: "grid",
+            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: "bold" },
+            margin: { left: 14, right: 14 },
+          });
+
+          yPosition = (doc.lastAutoTable?.finalY ?? yPosition) + 5;
+        }
+
+        doc.setFontSize(10);
+        doc.setFont(undefined, "bold");
+        doc.text(`Total do Pedido: ${formatCurrency(order.totalValue || 0)}`, 14, yPosition);
+
+        yPosition += 10;
+
+        doc.setDrawColor(200);
+        doc.line(14, yPosition, pageWidth - 14, yPosition);
+        yPosition += 8;
+      });
+      const totalRevenue = reportData.reduce((acc, order) => acc + (order.totalValue || 0), 0);
+      const totalOrders = reportData.length;
+      const totalItems = reportData.reduce((acc, order) => {
+        const items = Array.isArray(order.items) ? order.items : [];
+        return acc + items.reduce((sum, item) => sum + (item.quantity || item.qty || 1), 0);
+      }, 0);
+
+      if (yPosition > 230) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      doc.setFontSize(12);
+      doc.setFont(undefined, "bold");
+      doc.text("Resumo Geral", 14, yPosition);
+
+      doc.setFontSize(10);
+      doc.setFont(undefined, "normal");
+      doc.text(`Total de Pedidos: ${totalOrders}`, 14, yPosition + 7);
+      doc.text(`Total de Itens Vendidos: ${totalItems}`, 14, yPosition + 13);
+      doc.text(`Faturamento Total: ${formatCurrency(totalRevenue)}`, 14, yPosition + 19);
+
+      const fileName = `relatorio_${String(month).padStart(2, "0")}_${year}.pdf`;
+      doc.save(fileName);
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      alert("Erro ao gerar o PDF. Tente novamente.");
+    }
+  };
+
   if (!ready) return null;
 
-  // Responsive styles
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
   const page = {
     minHeight: "calc(100svh - 56px)",
@@ -238,7 +343,6 @@ export default function RelatoriosPage() {
     });
   };
 
-
   return (
     <>
       <style jsx global>{`
@@ -266,6 +370,7 @@ export default function RelatoriosPage() {
           background-color: #f8fafc;
         }
       `}</style>
+
       <Nav />
 
       <main style={page}>
@@ -274,16 +379,11 @@ export default function RelatoriosPage() {
         </div>
 
         <section style={panel}>
-          <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6 }}>
-            Relatórios de vendas
-          </h1>
+          <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6 }}>Relatórios de vendas</h1>
           <p style={{ fontSize: 14, color: "#475569", marginBottom: 16 }}>
-            Visão detalhada dos pedidos e itens vendidos na lojinha solidária.
+            Visão detalhada dos pedidos e itens vendidos na loja solidária.
           </p>
 
-          {/* -------------------------------- */}
-          {/*      CARDS ORIGINAIS             */}
-          {/* -------------------------------- */}
           <div
             style={{
               display: "grid",
@@ -294,37 +394,33 @@ export default function RelatoriosPage() {
           >
             <div style={{ ...panel, padding: 24 }}>
               <div style={cardTitle}>Pedidos no mês</div>
-              <div style={cardValue}>
-                {loadingSummary ? "…" : summary.totalOrders}
-              </div>
+              <div style={cardValue}>{loadingSummary ? "…" : summary.totalOrders}</div>
               <div style={cardSub}>Quantidade total de pedidos registrados.</div>
             </div>
 
             <div style={{ ...panel, padding: 24 }}>
               <div style={cardTitle}>Itens vendidos no mês</div>
-              <div style={cardValue}>
-                {loadingSummary ? "…" : summary.totalSold}
-              </div>
+              <div style={cardValue}>{loadingSummary ? "…" : summary.totalSold}</div>
               <div style={cardSub}>Soma de unidades vendidas.</div>
             </div>
 
             <div style={{ ...panel, padding: 24 }}>
               <div style={cardTitle}>Faturamento do mês</div>
-              <div style={cardValue}>
-                {loadingSummary ? "…" : formatCurrency(summary.totalRevenue)}
-              </div>
+              <div style={cardValue}>{loadingSummary ? "…" : formatCurrency(summary.totalRevenue)}</div>
               <div style={cardSub}>Total em valores registrados.</div>
+            </div>
+
+            <div style={{ ...panel, padding: 24 }}>
+              <div style={cardTitle}>Doações no mês</div>
+              <div style={cardValue}>{loadingSummary ? "…" : summary.totalDonations}</div>
+              <div style={cardSub}>Quantidade de doações recebidas.</div>
             </div>
           </div>
 
-          {/* -------------------------------- */}
-          {/*      NOVO FILTRO + RELATÓRIO     */}
-          {/* -------------------------------- */}
           <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, color: "#1e293b" }}>
             Relatório avançado
           </h2>
 
-          {/* CONTROLES */}
           <div
             style={{
               display: "flex",
@@ -338,14 +434,21 @@ export default function RelatoriosPage() {
               border: "1px solid #e2e8f0",
             }}
           >
-            {/* month */}
             <div>
-              <label style={{ fontSize: 14, fontWeight: 600, color: "#475569", marginBottom: 6, display: "block" }}>
+              <label
+                style={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "#475569",
+                  marginBottom: 6,
+                  display: "block",
+                }}
+              >
                 Mês
               </label>
               <select
                 value={month}
-                onChange={(e) => setMonth(e.target.value)}
+                onChange={(e) => setMonth(Number(e.target.value))}
                 disabled={allMonths}
                 style={{
                   padding: "10px 12px",
@@ -364,14 +467,21 @@ export default function RelatoriosPage() {
               </select>
             </div>
 
-            {/* year */}
             <div>
-              <label style={{ fontSize: 14, fontWeight: 600, color: "#475569", marginBottom: 6, display: "block" }}>
+              <label
+                style={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "#475569",
+                  marginBottom: 6,
+                  display: "block",
+                }}
+              >
                 Ano
               </label>
               <select
                 value={year}
-                onChange={(e) => setYear(e.target.value)}
+                onChange={(e) => setYear(Number(e.target.value))}
                 disabled={allMonths}
                 style={{
                   padding: "10px 12px",
@@ -382,25 +492,34 @@ export default function RelatoriosPage() {
                   fontSize: 14,
                 }}
               >
-                {[2023, 2024, 2025].map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
+                {(() => {
+                  const currentYear = new Date().getFullYear();
+                  const years = [];
+                  for (let y = 2023; y <= currentYear; y++) years.push(y);
+                  return years.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ));
+                })()}
               </select>
             </div>
 
-            {/* checkbox */}
-            <label style={{ display: "flex", gap: 8, fontSize: 14, color: "#334155", alignItems: "center", paddingBottom: 10, cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={allMonths}
-                onChange={(e) => setAllMonths(e.target.checked)}
-              />
+            <label
+              style={{
+                display: "flex",
+                gap: 8,
+                fontSize: 14,
+                color: "#334155",
+                alignItems: "center",
+                paddingBottom: 10,
+                cursor: "pointer",
+              }}
+            >
+              <input type="checkbox" checked={allMonths} onChange={(e) => setAllMonths(e.target.checked)} />
               Todos os meses
             </label>
 
-            {/* Botão */}
             <button
               onClick={handleGenerateReport}
               disabled={reportLoading}
@@ -420,9 +539,6 @@ export default function RelatoriosPage() {
             </button>
           </div>
 
-          {/* -------------------------------- */}
-          {/*       RESULTADOS DO RELATÓRIO    */}
-          {/* -------------------------------- */}
           {reportError && (
             <div
               style={{
@@ -437,59 +553,92 @@ export default function RelatoriosPage() {
             </div>
           )}
 
-          {/* 1 MÊS */}
           {reportData && Array.isArray(reportData) && !allMonths && (
-            <div className="table-wrapper"
-              style={{
-                border: "1px solid #e5e7eb",
-                borderRadius: 12,
-                overflow: "hidden",
-                background: "white",
-                marginBottom: 20,
-              }}
-            >
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <caption style={{ clip: "rect(0 0 0 0)", position: "absolute" }}>
-                  Relatório de vendas do mês selecionado
-                </caption>
-                <thead>
-                  <tr>
-                    <th style={th}>Data</th>
-                    <th style={th}>Pedido</th>
-                    <th style={th}>Cliente</th>
-                    <th style={th}>Valor</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {reportData.length === 0 ? (
+            <>
+              <div
+                className="table-wrapper"
+                style={{
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 12,
+                  overflow: "hidden",
+                  background: "white",
+                  marginBottom: 20,
+                }}
+              >
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <caption style={{ clip: "rect(0 0 0 0)", position: "absolute" }}>
+                    Relatório de vendas do mês selecionado
+                  </caption>
+                  <thead>
                     <tr>
-                      <td colSpan="4" style={td}>
-                        Nenhum dado encontrado.
-                      </td>
+                      <th style={th}>Data</th>
+                      <th style={th}>Pedido</th>
+                      <th style={th}>Tipo</th>
+                      <th style={th}>Cliente</th>
+                      <th style={th}>Valor</th>
                     </tr>
-                  ) : (
-                    reportData.map((order) => (
-                      <tr key={order.id}>
-                        <td style={td}>
-                          {new Date(order.createdAt).toLocaleDateString("pt-BR")}
-                        </td>
-                        <td style={td}>{order.id}</td>
-                        <td style={td}>
-                          {order.pickupName || order.userEmail || "Anônimo"}
-                        </td>
-                        <td style={td}>
-                          {formatCurrency(order.totalValue || 0)}
+                  </thead>
+
+                  <tbody>
+                    {reportData.length === 0 ? (
+                      <tr>
+                        <td colSpan="5" style={td}>
+                          Nenhum dado encontrado.
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    ) : (
+                      reportData.map((order, index) => (
+                        <tr key={order.id}>
+                          <td style={td}>{new Date(order.createdAt).toLocaleDateString("pt-BR")}</td>
+                          <td style={td}>Pedido n{index + 1}</td>
+                          <td style={td}>
+                            <span
+                              style={{
+                                display: "inline-block",
+                                padding: "4px 8px",
+                                borderRadius: 4,
+                                fontSize: 12,
+                                fontWeight: 600,
+                                background: order.isDonation ? "#dbeafe" : "#d1fae5",
+                                color: order.isDonation ? "#1e40af" : "#065f46",
+                              }}
+                            >
+                              {order.isDonation ? "Doação" : "Venda"}
+                            </span>
+                          </td>
+                          <td style={td}>{order.pickupName || order.userEmail || "Anônimo"}</td>
+                          <td style={td}>{formatCurrency(order.totalValue || 0)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div style={{ textAlign: "center", marginBottom: 32 }}>
+                <button
+                  onClick={handleDownloadPDF}
+                  style={{
+                    padding: "12px 24px",
+                    background: "#dc2626",
+                    color: "white",
+                    fontWeight: 700,
+                    borderRadius: 8,
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: 14,
+                    boxShadow: "0 4px 6px rgba(220, 38, 38, 0.3)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  📄 Baixar relatório completo (PDF)
+                </button>
+              </div>
+            </>
           )}
 
-          {/* TODOS OS MESES */}
           {reportData && !Array.isArray(reportData) && allMonths && (
             <div style={{ marginBottom: 20 }}>
               {Object.keys(reportData)
@@ -518,30 +667,16 @@ export default function RelatoriosPage() {
                       .sort((a, b) => b - a)
                       .map((mes) => {
                         const arr = reportData[ano][mes];
-                        const total = arr.reduce(
-                          (acc, o) => acc + (o.totalValue || 0),
-                          0
-                        );
+                        const total = arr.reduce((acc, o) => acc + (o.totalValue || 0), 0);
 
                         return (
                           <div key={mes} style={{ padding: 12 }}>
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                marginBottom: 6,
-                              }}
-                            >
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                               <strong>Mês {mes}</strong>
-
-                              <span style={{ fontWeight: 700 }}>
-                                Total: {formatCurrency(total)}
-                              </span>
+                              <span style={{ fontWeight: 700 }}>Total: {formatCurrency(total)}</span>
                             </div>
 
-                            <div style={{ fontSize: 13, color: "#64748b" }}>
-                              {arr.length} pedidos
-                            </div>
+                            <div style={{ fontSize: 13, color: "#64748b" }}>{arr.length} pedidos</div>
                           </div>
                         );
                       })}
@@ -550,9 +685,6 @@ export default function RelatoriosPage() {
             </div>
           )}
 
-          {/* -------------------------------- */}
-          {/*         LOGS ORIGINAIS           */}
-          {/* -------------------------------- */}
           <h2 style={{ fontSize: 18, fontWeight: 700, marginTop: 40, marginBottom: 16, color: "#1e293b" }}>
             Logs de alterações
           </h2>
@@ -576,7 +708,8 @@ export default function RelatoriosPage() {
           </button>
 
           {showLogs && (
-            <div className="table-wrapper"
+            <div
+              className="table-wrapper"
               style={{
                 border: "1px solid #e5e7eb",
                 borderRadius: 12,
@@ -587,14 +720,10 @@ export default function RelatoriosPage() {
               {loadingLogs ? (
                 <div style={{ padding: 16 }}>Carregando logs…</div>
               ) : logs.length === 0 ? (
-                <div style={{ padding: 16 }}>
-                  Nenhum log encontrado.
-                </div>
+                <div style={{ padding: 16 }}>Nenhum log encontrado.</div>
               ) : (
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <caption style={{ clip: "rect(0 0 0 0)", position: "absolute" }}>
-                    Logs de alterações do sistema
-                  </caption>
+                  <caption style={{ clip: "rect(0 0 0 0)", position: "absolute" }}>Logs de alterações do sistema</caption>
                   <thead>
                     <tr>
                       <th style={th}>Data/Hora</th>
@@ -615,7 +744,9 @@ export default function RelatoriosPage() {
                           style={tdDetails}
                           className="log-details-cell"
                           onClick={() => toggleLog(log.id)}
-                          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), toggleLog(log.id))}
+                          onKeyDown={(e) =>
+                            (e.key === "Enter" || e.key === " ") && (e.preventDefault(), toggleLog(log.id))
+                          }
                           role="button"
                           tabIndex={0}
                           aria-label="Detalhes do log"

@@ -30,10 +30,8 @@ export default function PagamentoPage({ params }) {
             }
         };
 
-        // Polling a cada 3 segundos
         const interval = setInterval(checkStatus, 3000);
 
-        // Primeira verificação imediata
         checkStatus();
 
         return () => clearInterval(interval);

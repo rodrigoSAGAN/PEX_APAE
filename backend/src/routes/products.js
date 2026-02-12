@@ -37,18 +37,13 @@ async function writeAuditLog({
     console.warn("[audit-log][products] falha ao registrar log:", e);
   }
 }
-
-//base publica
  
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || "http://localhost:4000";
-
-//UPLOAD 
 
 const rootDir = process.cwd();
 const uploadsDir = path.join(rootDir, "uploads");
 const productsDir = path.join(uploadsDir, "products");
 
-// garante que a pasta exista
 if (!fs.existsSync(productsDir)) {
   fs.mkdirSync(productsDir, { recursive: true });
 }
@@ -69,8 +64,6 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
-
-// exige token Firebase e permissão:
 
 async function requireAdmin(req, res, next) {
   try {
@@ -100,12 +93,10 @@ async function requireAdmin(req, res, next) {
     const isColab = roles.includes("colaborador");
     const canEditStore = decoded.canEditStore === true;
 
-    // Regra: admin OU colaborador 
     if (!isAdmin && !(isColab && canEditStore)) {
       return res.status(403).json({ error: "forbidden" });
     }
 
-    // Anexa info do usuário
     req.user = {
       uid: decoded.uid,
       email: decoded.email,
@@ -119,8 +110,6 @@ async function requireAdmin(req, res, next) {
     return res.status(401).json({ error: "invalid_token" });
   }
 }
-
-//lista os produtos
  
 router.get("/", async (_req, res) => {
   try {
@@ -145,8 +134,6 @@ router.get("/:id", async (req, res) => {
     res.status(500).json({ message: e.message });
   }
 });
-
-//cria produto
  
 router.post("/", requireAdmin, upload.single("image"), async (req, res) => {
   try {
@@ -179,8 +166,6 @@ router.post("/", requireAdmin, upload.single("image"), async (req, res) => {
       });
     }
 
-    // gera URL pública da img
-
     let finalImageUrl = bodyImageUrl || "";
     if (req.file) {
       const relativePath = `/uploads/products/${req.file.filename}`;
@@ -205,7 +190,6 @@ router.post("/", requireAdmin, upload.single("image"), async (req, res) => {
 
     const ref = await db.collection("products").add(payload);
 
-    // Log de criação
     await writeAuditLog({
       req,
       type: "product",
@@ -223,7 +207,6 @@ router.post("/", requireAdmin, upload.single("image"), async (req, res) => {
   }
 });
 
-// atualiza produto por ID
 router.put("/:id", requireAdmin, upload.single("image"), async (req, res) => {
   try {
     const ref = db.collection("products").doc(req.params.id);
@@ -251,7 +234,6 @@ router.put("/:id", requireAdmin, upload.single("image"), async (req, res) => {
       }
     }
 
-    //  sobrescreve imageUrl com URL pública
     if (req.file) {
       const relativePath = `/uploads/products/${req.file.filename}`;
       up.imageUrl = `${PUBLIC_BASE_URL}${relativePath}`;
@@ -292,7 +274,6 @@ router.put("/:id", requireAdmin, upload.single("image"), async (req, res) => {
     const final = await ref.get();
     const afterData = { id: final.id, ...final.data() };
 
-    // Log de atualização
     await writeAuditLog({
       req,
       type: "product",
@@ -309,8 +290,6 @@ router.put("/:id", requireAdmin, upload.single("image"), async (req, res) => {
     res.status(500).json({ message: e.message });
   }
 });
-
-// remove produto por ID
  
 router.delete("/:id", requireAdmin, async (req, res) => {
   try {
@@ -322,7 +301,6 @@ router.delete("/:id", requireAdmin, async (req, res) => {
 
     await ref.delete();
 
-    // Log de exclusão
     await writeAuditLog({
       req,
       type: "product",

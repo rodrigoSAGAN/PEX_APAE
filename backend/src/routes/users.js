@@ -2,8 +2,6 @@ import { Router } from "express";
 import { admin, db } from "../db/firestore.js";
 
 const router = Router();
-
-// registra logs 
  
 async function writeAuditLog({
   req,
@@ -34,8 +32,6 @@ async function writeAuditLog({
     console.warn("[audit-log][users] falha ao registrar log:", e);
   }
 }
-
-//ADMIN pode acessar essas rotas
 
 async function requireAdmin(req, res, next) {
   try {
@@ -70,8 +66,6 @@ async function requireAdmin(req, res, next) {
     return res.status(401).json({ error: "invalid_token" });
   }
 }
-
-// Lista todos os usuários
  
 router.get("/", requireAdmin, async (_req, res) => {
   try {
@@ -104,7 +98,6 @@ router.get("/", requireAdmin, async (_req, res) => {
   }
 });
 
-//permissoes de usuarios
 router.post("/:uid/permissions", requireAdmin, async (req, res) => {
   try {
     const { uid } = req.params;
@@ -138,7 +131,6 @@ router.post("/:uid/permissions", requireAdmin, async (req, res) => {
       ? [...currentClaims.roles]
       : [];
 
-    // Atualiza flags
     let newClaims = { ...currentClaims };
 
     if (typeof canEditStore === "boolean") {
@@ -149,7 +141,6 @@ router.post("/:uid/permissions", requireAdmin, async (req, res) => {
       newClaims.canEditEvents = canEditEvents;
     }
 
-    // Verifica permissoes do colaborador 
     const hasStore = newClaims.canEditStore === true;
     const hasEvents = newClaims.canEditEvents === true;
     const hasAnyCollabPermission = hasStore || hasEvents;
@@ -160,7 +151,6 @@ router.post("/:uid/permissions", requireAdmin, async (req, res) => {
         roles.push("colaborador");
       }
     } else {
-      // remove colaborador de roles
       roles = roles.filter((r) => r !== "colaborador");
     }
 
@@ -175,7 +165,6 @@ router.post("/:uid/permissions", requireAdmin, async (req, res) => {
       canEditEvents: newClaims.canEditEvents === true,
     };
 
-    //Log de alteração de permissões
     await writeAuditLog({
       req,
       type: "user",
@@ -211,7 +200,6 @@ router.post("/:uid/store-permission", requireAdmin, async (req, res) => {
       });
     }
 
-    // Reaproveita a lógica da rota nova
     req.body = { canEditStore: canEdit };
     return router.handle(req, res);
   } catch (e) {

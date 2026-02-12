@@ -201,7 +201,6 @@ router.post("/", optionalAuth, async (req, res) => {
 
     const { items, totalValue, pickupName, phoneWhatsApp } = req.body || {};
 
-    // Validação 1: items
     if (!Array.isArray(items)) {
       console.error("[orders] ERRO: items não é um array:", typeof items);
       return res.status(400).json({
@@ -220,7 +219,6 @@ router.post("/", optionalAuth, async (req, res) => {
 
     console.log("[orders] ✓ Validação items OK:", items.length, "itens");
 
-    // Validação 2: totalValue
     console.log("[orders] totalValue recebido:", totalValue, "tipo:", typeof totalValue);
 
     const numericTotal = Number(totalValue);
@@ -251,7 +249,6 @@ router.post("/", optionalAuth, async (req, res) => {
 
     console.log("[orders] ✓ Validação totalValue OK:", numericTotal);
 
-    // Validação 3: pickupName (obrigatório se não tiver usuário autenticado)
     if (!req.user && (!pickupName || !pickupName.trim())) {
       console.error("[orders] ERRO: pickupName vazio e usuário não autenticado");
       return res.status(400).json({
@@ -262,7 +259,6 @@ router.post("/", optionalAuth, async (req, res) => {
 
     console.log("[orders] ✓ Validação pickupName OK:", pickupName || "(usuário autenticado)");
 
-    // Construir payload
     const payload = {
       items,
       totalValue: numericTotal,
@@ -275,7 +271,6 @@ router.post("/", optionalAuth, async (req, res) => {
 
     console.log("[orders] Payload a ser salvo no Firestore:", JSON.stringify(payload, null, 2));
 
-    // Salvar no Firestore
     console.log("[orders] Salvando no Firestore...");
     const docRef = await db.collection("orders").add(payload);
     console.log("[orders] ✅ Pedido salvo com sucesso! ID:", docRef.id);

@@ -27,7 +27,7 @@ export default function PedidosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isMobile, setIsMobile] = useState(false);
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState("todo");
 
   const [authorized, setAuthorized] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -316,15 +316,17 @@ export default function PedidosPage() {
   };
 
   const tabBtn = (isActive) => ({
-    padding: "8px 16px",
+    padding: "12px 24px",
     borderRadius: 999,
-    border: isActive ? "1px solid #2563eb" : "1px solid #e2e8f0",
-    background: isActive ? "#eff6ff" : "#ffffff",
-    color: isActive ? "#1d4ed8" : "#64748b",
-    fontWeight: 600,
-    fontSize: 14,
+    border: "none",
+    background: isActive ? "#10b981" : "#ffffff",
+    color: isActive ? "#ffffff" : "#64748b",
+    fontWeight: 700,
+    fontSize: 15,
     cursor: "pointer",
     transition: "all 0.2s",
+    boxShadow: isActive ? "0 4px 12px rgba(16, 185, 129, 0.3)" : "0 1px 3px rgba(0,0,0,0.1)",
+    border: isActive ? "none" : "1px solid #e2e8f0",
   });
 
   const tableWrap = {
@@ -503,19 +505,11 @@ export default function PedidosPage() {
           </div>
 
           <div style={tabsWrap}>
-
-
             <button
               onClick={() => setActiveTab("all")}
               style={tabBtn(activeTab === "all")}
             >
               Todas as vendas
-            </button>
-            <button
-              onClick={() => setActiveTab("donations")}
-              style={tabBtn(activeTab === "donations")}
-            >
-              Doações
             </button>
             <button
               onClick={() => setActiveTab("todo")}

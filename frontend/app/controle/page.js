@@ -334,7 +334,9 @@ export default function ControlePage() {
     padding: "2px 8px",
     borderRadius: 999,
     fontSize: 11,
-    border: "1px solid #bbf7d0",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "#bbf7d0",
     background: "#ecfdf5",
     color: "#166534",
   };

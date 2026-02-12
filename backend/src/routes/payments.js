@@ -20,7 +20,6 @@ router.get("/status/:orderId", async (req, res) => {
         const order = orderDoc.data();
         const status = order.status || "pending";
 
-        // Mapear status interno para status do pagamento
         let paymentStatus = "pending";
 
         if (status === "paid") {
