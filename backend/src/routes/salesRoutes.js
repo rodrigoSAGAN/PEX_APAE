@@ -1,8 +1,16 @@
+// =============================================================================
+// Rotas de relatórios de vendas.
+// Usadas pelo painel admin e pela tela de relatórios. Permitem filtrar
+// pedidos por mês/ano e também agrupar todos os pedidos por mês
+// (pra exibir gráficos e tabelas no frontend).
+// =============================================================================
+
 import { Router } from "express";
 import { db, admin } from "../db/firestore.js";
 
 const router = Router();
 
+// Mesmo middleware de acesso ao dashboard usado nas orders.
 async function requireDashboardAccess(req, res, next) {
   try {
     const authHeader = req.headers.authorization || "";
@@ -42,6 +50,7 @@ async function requireDashboardAccess(req, res, next) {
   }
 }
 
+// Lista pedidos filtrados por mês/ano — se não passar filtro, retorna tudo.
 router.get("/", requireDashboardAccess, async (req, res) => {
   try {
     const { month, year } = req.query;
@@ -93,6 +102,9 @@ router.get("/", requireDashboardAccess, async (req, res) => {
   }
 });
 
+// Agrupa todos os pedidos por ano e mês — retorna um objeto tipo:
+// { "2024": { "01": [...], "02": [...] }, "2025": { ... } }
+// Usado nos relatórios pra montar gráficos e tabelas mensais.
 router.get("/by-month", requireDashboardAccess, async (req, res) => {
   try {
     const snap = await db.collection("orders").orderBy("createdAt", "desc").get();

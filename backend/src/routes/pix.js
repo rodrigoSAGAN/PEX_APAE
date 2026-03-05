@@ -1,3 +1,10 @@
+// =============================================================================
+// Rota principal de geração de pagamento PIX via Mercado Pago (SDK novo).
+// Recebe o valor desejado, cria o pagamento no Mercado Pago e retorna
+// o QR Code (imagem base64 + código copia-e-cola) pro frontend exibir.
+// Em ambiente sandbox, se der erro 403, retorna um PIX mockado pra testes.
+// =============================================================================
+
 import { Router } from "express";
 import { MercadoPagoConfig, Payment } from "mercadopago";
 import dotenv from "dotenv";
@@ -6,6 +13,8 @@ dotenv.config();
 
 const router = Router();
 
+// Aceita tanto MP_ACCESS_TOKEN quanto MERCADOPAGO_ACCESS_TOKEN —
+// flexibilidade pra diferentes configurações de deploy.
 const ACCESS_TOKEN =
   process.env.MP_ACCESS_TOKEN || process.env.MERCADOPAGO_ACCESS_TOKEN;
 
@@ -23,6 +32,8 @@ if (!ACCESS_TOKEN) {
   console.log("✅ [pix] Access token do Mercado Pago foi carregado.");
 }
 
+// Instancia o client do Mercado Pago só se tiver token configurado.
+// Se não tiver, as variáveis ficam null e a rota retorna erro explicativo.
 const mpClient = ACCESS_TOKEN
   ? new MercadoPagoConfig({
       accessToken: ACCESS_TOKEN,
@@ -31,6 +42,7 @@ const mpClient = ACCESS_TOKEN
 
 const payment = mpClient ? new Payment(mpClient) : null;
  
+// Cria um pagamento PIX e retorna o QR Code para o frontend.
 router.post("/", async (req, res) => {
   try {
     
@@ -46,6 +58,7 @@ router.post("/", async (req, res) => {
     const { amount, totalValue, description } = req.body || {};
 
 
+    // Aceita "amount" ou "totalValue" — compatibilidade com diferentes telas do frontend.
     const rawValue = amount ?? totalValue;
     const value = Number(rawValue);
 
@@ -88,6 +101,8 @@ router.post("/", async (req, res) => {
     const isSandbox = ACCESS_TOKEN && ACCESS_TOKEN.startsWith("TEST-");
     const status = e?.status || e?.status_code || 500;
 
+    // Em ambiente sandbox, o Mercado Pago às vezes retorna 403.
+    // Nesse caso, retornamos um PIX mockado pra não travar o desenvolvimento.
     if (isSandbox && status === 403) {
       console.warn("⚠ [pix] Erro 403 em Sandbox. Retornando PIX MOCKADO para teste.");
       

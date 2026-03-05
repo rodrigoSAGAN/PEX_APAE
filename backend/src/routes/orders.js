@@ -1,9 +1,19 @@
+// =============================================================================
+// Rotas de pedidos (orders).
+// Aqui gerenciamos todo o ciclo de vida dos pedidos: criação (pelo cliente),
+// listagem (pelo painel admin), resumo mensal (pro dashboard) e controle
+// de entrega item a item. É uma das rotas mais importantes do sistema.
+// =============================================================================
+
 import { Router } from "express";
 import { db, admin } from "../db/firestore.js";
 import { auth as requireAuth } from "../middlewares/auth.js";
 
 const router = Router();
 
+// Middleware que verifica se o usuário tem acesso ao painel/dashboard.
+// Admin tem acesso total. Colaborador precisa ter pelo menos uma permissão
+// (canEditStore ou canEditEvents) pra poder visualizar os pedidos.
 async function requireDashboardAccess(req, res, next) {
   try {
     const authHeader = req.headers.authorization || "";
@@ -44,6 +54,9 @@ async function requireDashboardAccess(req, res, next) {
 }
 
 
+// Calcula o intervalo de datas pro filtro de período.
+// Por enquanto só suporta "month" (mês atual), mas a estrutura
+// já está pronta pra adicionar outros períodos no futuro.
 function getDateRangeForPeriod(period) {
   const now = new Date();
 
@@ -62,6 +75,8 @@ function getDateRangeForPeriod(period) {
 }
 
 
+// Retorna um resumo dos pedidos do mês — total de pedidos, itens vendidos
+// e receita total. Usado no dashboard do admin pra ter uma visão geral.
 router.get("/summary", requireDashboardAccess, async (req, res) => {
   try {
     const period = (req.query.period || "month").toString();
@@ -91,6 +106,9 @@ router.get("/summary", requireDashboardAccess, async (req, res) => {
 
       let orderTotal = 0;
 
+      // Tenta pegar o total direto do pedido. Se não existir, calcula
+      // somando os itens — essa flexibilidade existe porque o formato
+      // dos pedidos pode variar (campos diferentes em versões antigas).
       if (typeof data.totalValue === "number") {
         orderTotal = data.totalValue;
       } else {
@@ -134,6 +152,8 @@ router.get("/summary", requireDashboardAccess, async (req, res) => {
   }
 });
 
+// Lista todos os pedidos do período (painel admin).
+// Converte o Timestamp do Firestore pra ISO string pro frontend conseguir usar.
 router.get("/", requireDashboardAccess, async (req, res) => {
   try {
     const period = (req.query.period || "month").toString();
@@ -174,6 +194,8 @@ router.get("/", requireDashboardAccess, async (req, res) => {
   }
 });
 
+// Auth opcional — se o cliente está logado, pega os dados dele.
+// Se não está, segue sem problema (compra como visitante é permitida).
 async function optionalAuth(req, res, next) {
   try {
     const authHeader = req.headers.authorization || "";
@@ -192,6 +214,10 @@ async function optionalAuth(req, res, next) {
   next();
 }
 
+// Cria um novo pedido — pode ser feito por usuário logado ou visitante.
+// Visitantes precisam informar o nome de retirada (pickupName).
+// Esse endpoint tem bastante log de debug pra facilitar a investigação
+// caso algo dê errado no fluxo de compra.
 router.post("/", optionalAuth, async (req, res) => {
   try {
     console.log("[orders] POST / - Recebendo requisição");
@@ -290,6 +316,8 @@ router.post("/", optionalAuth, async (req, res) => {
 });
 
 
+// Marca um item específico do pedido como entregue (ou desfaz a entrega).
+// O admin usa isso no painel de controle pra gerenciar entregas item a item.
 router.put("/:id/delivery", requireDashboardAccess, async (req, res) => {
   try {
     const { id } = req.params;

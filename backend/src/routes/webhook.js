@@ -1,3 +1,17 @@
+// =============================================================================
+// Webhook do Mercado Pago.
+// Esse endpoint é chamado automaticamente pelo Mercado Pago quando o status
+// de um pagamento muda. O fluxo é:
+//   1. Mercado Pago envia uma notificação pra cá
+//   2. Validamos a assinatura HMAC pra garantir que é legítimo
+//   3. Consultamos a API do MP pra pegar os detalhes do pagamento
+//   4. Se o pagamento foi aprovado, atualizamos o pedido no Firestore
+//
+// IMPORTANTE: Esse endpoint usa express.raw() porque precisa do body cru
+// pra validar a assinatura. Por isso ele é registrado ANTES do express.json()
+// no server.js.
+// =============================================================================
+
 import express from "express";
 import crypto from "crypto";
 import axios from "axios";
@@ -11,6 +25,7 @@ const router = express.Router();
 const MP_ACCESS_TOKEN =
   process.env.MP_ACCESS_TOKEN || process.env.MERCADOPAGO_ACCESS_TOKEN;
 
+// Segredo usado pra validar que a notificação realmente veio do Mercado Pago.
 const MP_WEBHOOK_SECRET = process.env.MP_WEBHOOK_SECRET;
 
 router.post(
@@ -49,6 +64,8 @@ router.post(
         return res.status(200).json({ received: true });
       }
 
+      // Monta o "manifesto" e calcula o hash HMAC-SHA256.
+      // Se o hash que calculamos bater com o que veio no header, a notificação é legítima.
       const manifest = `id:${paymentId};request-id:${xRequestId};ts:${ts};`;
 
       const expectedHash = crypto
@@ -81,6 +98,8 @@ router.post(
       console.log("[webhook] Status:", payment.status);
       console.log("[webhook] External ref:", payment.external_reference);
 
+      // Se o pagamento foi aprovado e tem referência ao pedido, atualiza o status
+      // no Firestore pra "paid" — isso é o que faz o pedido aparecer como pago no sistema.
       if (payment.status === "approved" && payment.external_reference) {
         const orderId = payment.external_reference;
 

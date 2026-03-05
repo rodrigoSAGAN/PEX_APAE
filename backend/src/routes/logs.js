@@ -1,8 +1,16 @@
+// =============================================================================
+// Rotas de logs de auditoria.
+// Toda ação importante no sistema (criar/editar/excluir produtos, eventos,
+// alterar permissões) é registrada aqui. Só admin pode ver os logs.
+// O frontend (painel admin) também pode criar logs manualmente via POST.
+// =============================================================================
+
 import { Router } from "express";
 import { db, admin } from "../db/firestore.js";
 
 const router = Router();
 
+// Somente admin pode visualizar os logs de auditoria.
 async function requireAdmin(req, res, next) {
   try {
     const authHeader = req.headers.authorization || "";
@@ -32,6 +40,7 @@ async function requireAdmin(req, res, next) {
   }
 }
 
+// Lista os logs mais recentes — aceita ?limit=N (padrão 100, máximo 500).
 router.get("/", requireAdmin, async (req, res) => {
   try {
     const rawLimit = parseInt(req.query.limit, 10);
@@ -68,6 +77,9 @@ router.get("/", requireAdmin, async (req, res) => {
   }
 });
 
+// Cria um novo registro de log — usado pelo frontend pra registrar
+// ações manuais (ex: marcar pedido como entregue). Qualquer usuário
+// com permissão de admin ou colaborador pode criar logs.
 router.post("/", async (req, res) => {
   try {
     const authHeader = req.headers.authorization || "";

@@ -1,8 +1,17 @@
+// =============================================================================
+// Rotas de gestão de usuários e permissões.
+// Somente admins podem acessar essas rotas. Aqui listamos todos os usuários
+// do Firebase Auth, atualizamos permissões (canEditStore, canEditEvents) e
+// gerenciamos automaticamente o role de "colaborador" — se o usuário recebe
+// qualquer permissão, ele vira colaborador; se todas são removidas, perde o role.
+// =============================================================================
+
 import { Router } from "express";
 import { admin, db } from "../db/firestore.js";
 
 const router = Router();
- 
+
+// Log de auditoria — registra toda alteração de permissão pra ter histórico.
 async function writeAuditLog({
   req,
   type,
@@ -33,6 +42,7 @@ async function writeAuditLog({
   }
 }
 
+// Só admin pode gerenciar usuários — sem exceção.
 async function requireAdmin(req, res, next) {
   try {
     const authHeader = req.headers.authorization || "";
@@ -67,6 +77,8 @@ async function requireAdmin(req, res, next) {
   }
 }
  
+// Lista todos os usuários do Firebase Auth com suas claims/permissões.
+// Usa paginação interna (listUsers retorna em blocos de até 1000).
 router.get("/", requireAdmin, async (_req, res) => {
   try {
     const all = [];
@@ -98,6 +110,10 @@ router.get("/", requireAdmin, async (_req, res) => {
   }
 });
 
+// Atualiza as permissões de um usuário (canEditStore e/ou canEditEvents).
+// Lógica importante: se o usuário recebe qualquer permissão, ele automaticamente
+// ganha o role "colaborador". Se todas as permissões são removidas, o role
+// "colaborador" é retirado. Isso simplifica a gestão de acesso.
 router.post("/:uid/permissions", requireAdmin, async (req, res) => {
   try {
     const { uid } = req.params;
@@ -188,6 +204,8 @@ router.post("/:uid/permissions", requireAdmin, async (req, res) => {
 });
 
 
+// Rota legada — atalho pra atualizar só a permissão de loja.
+// Converte o campo "canEdit" pro formato novo e redireciona internamente.
 router.post("/:uid/store-permission", requireAdmin, async (req, res) => {
   try {
     const { uid } = req.params;

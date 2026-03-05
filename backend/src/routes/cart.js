@@ -1,8 +1,17 @@
+// =============================================================================
+// Rotas do carrinho de compras.
+// Gerenciamos o carrinho do usuário no Firestore — salvar, buscar e mesclar
+// com itens que ele tinha no localStorage antes de fazer login.
+// Cada usuário tem um documento na coleção "carts" com seu UID como ID.
+// =============================================================================
+
 import { Router } from "express";
 import { db, admin } from "../db/firestore.js";
 
 const router = Router();
 
+// Autenticação simplificada — verifica o token do Firebase
+// e coloca uid/email no req.user pra usar nas rotas abaixo.
 async function requireAuth(req, res, next) {
   try {
     const authHeader = req.headers.authorization || "";
@@ -24,6 +33,7 @@ async function requireAuth(req, res, next) {
   }
 }
 
+// Salva (ou atualiza) o carrinho inteiro do usuário no Firestore.
 router.post("/", requireAuth, async (req, res) => {
   try {
     const { items } = req.body || {};
@@ -42,6 +52,9 @@ router.post("/", requireAuth, async (req, res) => {
   }
 });
 
+// Mescla o carrinho local (localStorage) com o que já existe no Firestore.
+// Isso acontece quando o usuário faz login e já tinha itens salvos localmente —
+// a gente soma as quantidades pra não perder nada.
 router.post("/merge", requireAuth, async (req, res) => {
   try {
     const { localItems } = req.body || {};
@@ -78,6 +91,7 @@ router.post("/merge", requireAuth, async (req, res) => {
   }
 });
 
+// Busca o carrinho atual do usuário no Firestore.
 router.get("/", requireAuth, async (req, res) => {
   try {
     const uid = req.user.uid;

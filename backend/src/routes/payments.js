@@ -1,8 +1,17 @@
+// =============================================================================
+// Rota de consulta de status de pagamento.
+// O frontend usa essa rota pra fazer polling (consultar periodicamente) e
+// saber se o PIX já foi pago. Quando o webhook atualiza o pedido pra "paid",
+// essa rota retorna "approved" e o frontend redireciona o cliente.
+// =============================================================================
+
 import { Router } from "express";
 import { db } from "../db/firestore.js";
 
 const router = Router();
 
+// Consulta o status de pagamento de um pedido pelo ID.
+// Traduz o status interno ("paid", "cancelled") pro formato do frontend.
 router.get("/status/:orderId", async (req, res) => {
     try {
         const { orderId } = req.params;

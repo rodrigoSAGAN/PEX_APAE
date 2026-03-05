@@ -1,3 +1,10 @@
+// =============================================================================
+// Menu lateral do painel admin (dashboard).
+// Exibe os links de navegação interna: Lojinha, Pedidos, Eventos, etc.
+// Links de Relatórios, Permissões e Galeria só aparecem pra admins.
+// Destaca visualmente o link da página atual (azul).
+// =============================================================================
+
 "use client";
 
 import Link from "next/link";

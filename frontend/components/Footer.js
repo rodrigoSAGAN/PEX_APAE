@@ -1,3 +1,11 @@
+// =============================================================================
+// Footer global do site.
+// Exibe informações de contato da APAE Pinhão (endereço, telefones),
+// links para redes sociais e links úteis. Aparece em todas as páginas
+// exceto nas de autenticação (login/cadastro) — essa lógica fica no
+// FooterWrapper.
+// =============================================================================
+
 import React from "react";
 
 export default function Footer() {

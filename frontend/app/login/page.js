@@ -1,3 +1,13 @@
+// ===================================================================
+// Pagina de Login - Portal APAE Pinhao
+// ===================================================================
+// Tela de autenticacao onde o usuario (admin ou colaborador) faz
+// login com e-mail e senha via Firebase Auth. Apos o login, a gente
+// verifica as claims/roles do usuario pra decidir se ele vai pro
+// dashboard (admin/colaborador) ou pra pagina inicial (usuario comum).
+// Tambem tem links pra criar conta e recuperar senha.
+// ===================================================================
+
 "use client";
 import Nav from "../../components/Nav";
 import Link from "next/link";
@@ -7,6 +17,7 @@ import { auth } from "../../lib/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 
 export default function LoginPage() {
+  // Estados do formulario: campos, loading e mensagem de erro
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [busy, setBusy] = useState(false);
@@ -14,7 +25,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
-
+  // Faz o login e redireciona conforme as permissoes do usuario
   async function handleLogin(e) {
     e.preventDefault();
     setErr("");

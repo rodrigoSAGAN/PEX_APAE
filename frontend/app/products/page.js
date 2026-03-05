@@ -12,36 +12,49 @@ import { useModal } from "../../components/ModalContext";
 export default function ProductsPage() {
   const router = useRouter();
   const { showModal, showConfirm } = useModal();
+  // Estado principal da página: lista de produtos, carregamento e erros
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
+  // Estado do formulário de cadastro/edição de produtos
   const [form, setForm] = useState({
     name: "",
     price: "",
     stock: "",
     category: "",
   });
+  // Quando 'editing' tem valor, estamos editando um produto existente; quando é null, estamos criando
   const [editing, setEditing] = useState(null);
 
+  // Imagem selecionada para o produto (arquivo e pré-visualização local)
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
 
+  // Controle de permissões: 'canEdit' libera o formulário de gestão, 'claims' guarda os papéis do usuário
   const [canEdit, setCanEdit] = useState(false);
   const [claims, setClaims] = useState(null);
 
+  // Carrinho: objeto { [produtoId]: quantidade }
   const [cart, setCart] = useState({});
 
+  // Filtro de categoria selecionado na barra de filtros
   const [filterClass, setFilterClass] = useState("all");
 
+  // Estados relacionados à câmera para tirar foto do produto
   const [showCamera, setShowCamera] = useState(false);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [stream, setStream] = useState(null);
+  // Flag que indica se é seguro gravar no localStorage ainda — evita sobrescrever antes de carregar
   const [readyToPersist, setReadyToPersist] = useState(false);
 
   const API = "/api/products";
 
+  // Ao montar a página, tentamos recuperar o carrinho salvo no localStorage.
+  // Usamos try/catch porque o localStorage pode estar bloqueado (modo privado, etc.)
+  // O 'finally' garante que setReadyToPersist(true) sempre é chamado, mesmo se der erro,
+  // para que o carrinho comece a ser salvo nas próximas interações.
   useEffect(() => {
     try {
       const raw = localStorage.getItem("portal-apae-cart");
@@ -61,6 +74,9 @@ export default function ProductsPage() {
     }
   }, []);
 
+  // Sempre que o carrinho mudar, persistimos ele no localStorage.
+  // O 'readyToPersist' é fundamental aqui: sem ele, esse efeito rodaria antes
+  // da leitura inicial e sobrescreveria o carrinho salvo com um objeto vazio.
   useEffect(() => {
     if (!readyToPersist) return;
     try {
@@ -73,6 +89,9 @@ export default function ProductsPage() {
     }
   }, [cart, readyToPersist]);
 
+  // Garante que a câmera seja encerrada quando o usuário sai da página.
+  // Sem isso, o navegador continuaria gravando em segundo plano e o ícone de câmera
+  // ficaria ativo na aba, o que seria bem assustador para o usuário.
   useEffect(() => {
     return () => {
       if (stream) {
@@ -81,6 +100,11 @@ export default function ProductsPage() {
     };
   }, [stream]);
 
+  // Adiciona o produto ao carrinho e redireciona direto para o carrinho.
+  // Antes de adicionar, verificamos duas coisas:
+  // 1) Se o usuário é admin/colaborador — eles não deveriam comprar pelo painel
+  // 2) Se a quantidade pedida não ultrapassa o estoque disponível
+  // O estoque vem do banco e pode ser number ou string, por isso a normalização com Number()
   function addToCart(product) {
     if (claims) {
       showModal("Faça logout para realizar compras.", "Acesso Restrito");
@@ -120,6 +144,10 @@ export default function ProductsPage() {
     }
   }
 
+  // Verifica as permissões do usuário logado para decidir se o formulário de gestão aparece.
+  // Decodificamos o JWT manualmente aqui (sem biblioteca) apenas para ler as claims do payload
+  // — não precisamos verificar a assinatura pois essa validação é responsabilidade do backend.
+  // A regra de negócio é: admin pode tudo; colaborador só se tiver a flag canEditStore.
   async function checkPermissions() {
     try {
       const token = await getIdTokenOrNull();
@@ -139,6 +167,8 @@ export default function ProductsPage() {
 
       const [, payloadBase64] = parts;
 
+      // O payload do JWT é codificado em Base64url (diferente do Base64 padrão).
+      // Precisamos trocar os caracteres '-' por '+' e '_' por '/' antes de decodificar.
       const payloadJson = atob(
         payloadBase64.replace(/-/g, "+").replace(/_/g, "/")
       );
@@ -163,6 +193,10 @@ export default function ProductsPage() {
     checkPermissions();
   }, []);
 
+  // Salva um produto novo ou atualiza um existente.
+  // A lógica de envio muda dependendo se existe uma imagem:
+  // - Com imagem: usamos FormData (multipart) para enviar arquivo binário junto com os dados
+  // - Sem imagem: usamos JSON puro, que é mais simples e leve
   async function handleSave(e) {
     e.preventDefault();
 
@@ -175,6 +209,7 @@ export default function ProductsPage() {
         );
       }
 
+      // Se 'editing' existir, é uma atualização (PUT); senão, é criação (POST)
       const method = editing ? "PUT" : "POST";
       const url = editing ? `${API}/${editing.id}` : API;
 
@@ -269,12 +304,17 @@ export default function ProductsPage() {
     }
   }
 
+  // Filtra os produtos conforme a categoria selecionada.
+  // Comparamos em lowercase para evitar problemas de capitalização inconsistente no banco.
   const filteredItems = items.filter((p) => {
     if (filterClass === "all") return true;
     const cat = (p.category || "").toString().toLowerCase();
     return cat === filterClass;
   });
 
+  // Detecta se o usuário está em um dispositivo móvel para ajustar o layout.
+  // A sidebar de administração só aparece em telas maiores (desktop)
+  // para não poluir a experiência em celulares.
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const checkSize = () => setIsMobile(window.innerWidth < 768);
@@ -285,6 +325,8 @@ export default function ProductsPage() {
 
   const showSidebar = !isMobile && claims;
 
+  // Adiciona 1 unidade ao carrinho sem redirecionar — é o botão rápido '+' sobre a imagem do produto.
+  // A diferença do addToCart é que aqui o usuário fica na página, podendo continuar navegando.
   function handleQuickAdd(product) {
     if (claims) {
       showModal("Faça logout para realizar compras.", "Acesso Restrito");
@@ -306,6 +348,8 @@ export default function ProductsPage() {
     localStorage.setItem("portal-apae-cart", JSON.stringify(newCart));
   }
 
+  // Remove 1 unidade do carrinho. Se chegar a zero, remove a chave do objeto
+  // para não acumular entradas com quantidade 0 que poluiriam o estado e o localStorage.
   function handleDecrease(product) {
     if (claims) {
       showModal("Faça logout para realizar compras.", "Acesso Restrito");
@@ -329,6 +373,10 @@ export default function ProductsPage() {
     localStorage.setItem("portal-apae-cart", JSON.stringify(newCart));
   }
 
+  // Solicita acesso à câmera do dispositivo para tirar foto do produto.
+  // Tentamos primeiro a câmera traseira (environment) por ser mais adequada para fotos de produtos.
+  // Se o navegador não suportar facingMode, caimos no fallback que aceita qualquer câmera.
+  // Tratamos erros específicos de permissão e de dispositivo não encontrado para dar mensagens claras.
   async function startCamera() {
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -388,6 +436,9 @@ export default function ProductsPage() {
     setShowCamera(false);
   }
 
+  // Captura o frame atual do vídeo e converte para um arquivo JPEG.
+  // Usamos qualidade 0.4 (40%) para manter o arquivo pequeno sem sacrificar muito a qualidade visual.
+  // O canvas serve como intermediador: desenhamos o frame nele e depois exportamos como blob.
   function capturePhoto() {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
@@ -400,6 +451,7 @@ export default function ProductsPage() {
 
       canvas.toBlob((blob) => {
         if (blob) {
+          // Nomeamos o arquivo com um timestamp para garantir unicidade e facilitar debug
           const file = new File([blob], `camera_capture_${Date.now()}.jpg`, {
             type: "image/jpeg",
           });

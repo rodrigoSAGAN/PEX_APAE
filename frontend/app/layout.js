@@ -1,3 +1,13 @@
+// ===================================================================
+// Layout Raiz da Aplicacao - Portal APAE Pinhao
+// ===================================================================
+// Esse eh o layout principal que envolve todas as paginas do site.
+// Aqui a gente configura as fontes (Geist), define os metadados
+// globais (titulo, favicon), e monta a estrutura base com o
+// ModalProvider (para modais globais), o wrapper de conteudo
+// e o footer. Toda pagina do Next.js passa por aqui.
+// ===================================================================
+
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ModalProvider } from "../components/ModalContext";

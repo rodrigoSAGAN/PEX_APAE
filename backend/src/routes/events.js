@@ -1,8 +1,17 @@
+// =============================================================================
+// Rotas de eventos da APAE.
+// CRUD completo de eventos (festas, encontros, etc.) + simulação de reservas
+// e listagem de reservas agrupadas por evento. Só admins e colaboradores com
+// permissão canEditEvents podem criar/editar/excluir eventos.
+// =============================================================================
+
 import { Router } from "express";
 import { db, admin } from "../db/firestore.js";
 
 const router = Router();
- 
+
+// Registra uma ação no log de auditoria — toda alteração importante em eventos
+// é registrada aqui pra saber quem fez o quê e quando.
 async function writeAuditLog({
   req,
   type,
@@ -33,6 +42,8 @@ async function writeAuditLog({
   }
 }
 
+// Middleware que verifica se o usuário pode editar eventos.
+// Admin tem acesso total; colaborador precisa ter canEditEvents = true.
 async function requireEventsEditor(req, res, next) {
   try {
     const authHeader = req.headers.authorization || "";
@@ -66,6 +77,7 @@ async function requireEventsEditor(req, res, next) {
   }
 }
  
+// Lista todos os eventos ordenados por data (público, não precisa de auth).
 router.get("/", async (_req, res) => {
   try {
     const snap = await db
@@ -87,6 +99,7 @@ router.get("/", async (_req, res) => {
   }
 });
 
+// Cria um novo evento — só quem tem permissão de edição de eventos.
 router.post("/", requireEventsEditor, async (req, res) => {
   try {
     const { title, date, location, description, coverImage, isFree, priceAdult, priceChild } = req.body || {};
@@ -136,6 +149,8 @@ router.post("/", requireEventsEditor, async (req, res) => {
   }
 });
 
+// Atualiza um evento existente — só os campos enviados são modificados.
+// Se o evento for marcado como gratuito (isFree), os preços são zerados.
 router.put("/:id", requireEventsEditor, async (req, res) => {
   try {
     const { id } = req.params;
@@ -199,6 +214,7 @@ router.put("/:id", requireEventsEditor, async (req, res) => {
   }
 });
 
+// Remove um evento permanentemente do Firestore.
 router.delete("/:id", requireEventsEditor, async (req, res) => {
   try {
     const { id } = req.params;
@@ -233,6 +249,9 @@ router.delete("/:id", requireEventsEditor, async (req, res) => {
   }
 });
 
+// Simula uma reserva de evento — cria um pedido "pago" direto no Firestore,
+// sem passar por pagamento real. Usado pelo painel admin pra registrar
+// reservas feitas presencialmente ou por outros meios.
 router.post("/simulate-reservation", requireEventsEditor, async (req, res) => {
   try {
     const { eventId, adultQuantity, childQuantity, reservationName } = req.body || {};
@@ -322,6 +341,9 @@ router.post("/simulate-reservation", requireEventsEditor, async (req, res) => {
   }
 });
 
+// Lista todas as reservas de eventos agrupadas por evento.
+// Percorre todos os pedidos pagos e filtra os itens que são de eventos
+// (identificados pelo prefixo "event-" no ID do item), agrupando por eventId.
 router.get("/reservations", requireEventsEditor, async (req, res) => {
   try {
     const ordersSnap = await db

@@ -1,3 +1,11 @@
+// =============================================================================
+// Navbar do painel administrativo.
+// Aparece pra admins e colaboradores com permissão de dashboard.
+// Tem versão desktop (links horizontais) e mobile (menu fullscreen).
+// O link "Controle" leva pro dashboard onde ficam os CRUDs e relatórios.
+// Estilo com gradiente colorido e glassmorphism (blur + transparência).
+// =============================================================================
+
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";

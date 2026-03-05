@@ -1,3 +1,12 @@
+// =============================================================================
+// Sistema de modais globais (alerta e confirmação).
+// Usando Context API, qualquer componente pode chamar showModal("mensagem")
+// ou showConfirm("tem certeza?") sem precisar importar um componente modal.
+// Retorna uma Promise que resolve true/false, facilitando o uso com await.
+// Exemplo: const ok = await showConfirm("Deseja excluir?");
+// Também implementa acessibilidade: trap de foco, Escape pra fechar, aria.
+// =============================================================================
+
 "use client";
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";

@@ -1,3 +1,11 @@
+// =============================================================================
+// Navbar do usuário comum / visitante.
+// Exibe links públicos (Início, Loja, Eventos) + botão "Apoiar" (doação).
+// Mostra "Ver carrinho" se o visitante tem itens no localStorage.
+// Se não está logado, mostra "Entrar"; se está, mostra "Sair".
+// Responsiva: desktop com links horizontais, mobile com menu fullscreen.
+// =============================================================================
+
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";

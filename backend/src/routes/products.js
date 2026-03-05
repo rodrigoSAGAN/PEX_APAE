@@ -1,3 +1,10 @@
+// =============================================================================
+// Rotas de produtos da loja APAE.
+// CRUD completo com upload de imagem via Multer. Só admins e colaboradores
+// com permissão canEditStore podem criar, editar e excluir produtos.
+// Todas as alterações são registradas no log de auditoria.
+// =============================================================================
+
 import { Router } from "express";
 import { db } from "../db/firestore.js";
 import admin from "firebase-admin";
@@ -7,7 +14,7 @@ import fs from "fs";
 
 const router = Router();
 
-
+// Registra ações no log de auditoria pra rastrear quem fez o quê nos produtos.
 async function writeAuditLog({
   req,
   type,
@@ -38,8 +45,11 @@ async function writeAuditLog({
   }
 }
  
+// URL base pra montar os links das imagens de produto.
+// Em produção, vem da variável de ambiente; em dev, usa localhost.
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || "http://localhost:4000";
 
+// Garante que a pasta de uploads de produtos existe antes de tentar salvar algo.
 const rootDir = process.cwd();
 const uploadsDir = path.join(rootDir, "uploads");
 const productsDir = path.join(uploadsDir, "products");
@@ -48,6 +58,8 @@ if (!fs.existsSync(productsDir)) {
   fs.mkdirSync(productsDir, { recursive: true });
 }
 
+// Configuração do Multer pra salvar as imagens com nomes únicos,
+// evitando conflitos quando dois produtos têm o mesmo nome de arquivo.
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
     cb(null, productsDir);
@@ -65,6 +77,9 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+// Middleware que verifica se o usuário pode editar a loja.
+// Admin tem acesso total; colaborador precisa ter canEditStore = true.
+// Também tem compatibilidade com o formato antigo de claims (decoded.admin, etc.)
 async function requireAdmin(req, res, next) {
   try {
     const authHeader = req.headers.authorization || "";
@@ -111,6 +126,7 @@ async function requireAdmin(req, res, next) {
   }
 }
  
+// Lista todos os produtos (público, qualquer pessoa pode ver).
 router.get("/", async (_req, res) => {
   try {
     const snap = await db.collection("products").get();
@@ -123,6 +139,7 @@ router.get("/", async (_req, res) => {
 });
 
 
+// Busca um produto específico pelo ID.
 router.get("/:id", async (req, res) => {
   try {
     const ref = db.collection("products").doc(req.params.id);
@@ -135,6 +152,8 @@ router.get("/:id", async (req, res) => {
   }
 });
  
+// Cria um novo produto — aceita upload de imagem via multipart/form-data.
+// Se vier uma imagem no campo "image", o Multer salva e gera a URL.
 router.post("/", requireAdmin, upload.single("image"), async (req, res) => {
   try {
     const {
@@ -207,6 +226,8 @@ router.post("/", requireAdmin, upload.single("image"), async (req, res) => {
   }
 });
 
+// Atualiza um produto — só os campos enviados são modificados (whitelist).
+// Também aceita nova imagem via upload.
 router.put("/:id", requireAdmin, upload.single("image"), async (req, res) => {
   try {
     const ref = db.collection("products").doc(req.params.id);
@@ -291,6 +312,7 @@ router.put("/:id", requireAdmin, upload.single("image"), async (req, res) => {
   }
 });
  
+// Remove um produto permanentemente do Firestore.
 router.delete("/:id", requireAdmin, async (req, res) => {
   try {
     const ref = db.collection("products").doc(req.params.id);

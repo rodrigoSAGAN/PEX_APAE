@@ -1,3 +1,12 @@
+// =============================================================================
+// Modal de doação via PIX.
+// Fluxo: o usuário preenche nome (obrigatório) e telefone (opcional),
+// clica em "Gerar Doação via PIX", a gente chama a API do backend que
+// cria o pagamento no Mercado Pago, e então exibimos o QR Code e o
+// código copia-e-cola pra ele pagar. Tem acessibilidade completa:
+// trap de foco, fechamento com Escape, aria-labels, etc.
+// =============================================================================
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";
