@@ -1,12 +1,22 @@
+// =============================================================================
+// events/page.js — Página de eventos (listagem + gestão + reservas)
+//
+// Para visitantes: mostra os eventos cadastrados com botão "Reserve Agora"
+// que abre um modal para selecionar quantidade de adultos/crianças e enviar
+// pro carrinho. Para admins/colaboradores com canEditEvents: formulário de
+// CRUD de eventos (título, data, local, preço adulto/criança, imagem de capa)
+// e botão de "Simular Reserva" que cria um pedido pago direto no banco (teste).
+// =============================================================================
+
 "use client";
- 
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Nav from "../../components/Nav";
 import SideMenu from "../../components/SideMenu";
 import { getIdTokenOrNull } from "../../lib/authToken";
 import { useModal } from "../../components/ModalContext";
- 
+
 export default function EventsPage() {
  const { showModal, showConfirm } = useModal();
  const [events, setEvents] = useState([]);
@@ -46,6 +56,7 @@ export default function EventsPage() {
  
  const API = "/api/events";
  
+ // Busca a lista de eventos da API
  async function load() {
    setErr("");
    setLoading(true);
@@ -62,6 +73,8 @@ export default function EventsPage() {
    }
  }
  
+ // Decodifica o JWT para verificar se o usuário pode editar eventos.
+ // Admin pode tudo; colaborador precisa da flag canEditEvents.
  async function checkPermissions() {
    try {
      const token = await getIdTokenOrNull();
@@ -219,6 +232,8 @@ export default function EventsPage() {
    if (childQuantity > 0) setChildQuantity(prev => prev - 1);
  }
  
+ // Adiciona ingressos selecionados (adulto/criança) ao carrinho no localStorage
+ // e redireciona para /carrinho. Também salva o nome do responsável como metadado.
  function handleReserveCheckout() {
    if (canEditEvents) {
      showModal("Faça logout para fazer reservas.", "Acesso Restrito");
@@ -310,6 +325,7 @@ export default function EventsPage() {
    }
  }
  
+ // Cria uma reserva "simulada" com status pago direto no banco — útil para testes
  async function handleSimulateReservation() {
    if (!simulateEventId) {
      return showModal("Por favor, selecione um evento.", "Aten\u00e7\u00e3o");

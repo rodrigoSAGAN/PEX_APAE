@@ -1,10 +1,20 @@
+// =============================================================================
+// reservaseventos/page.js — Relatório de reservas de eventos
+//
+// Mostra todas as reservas com pagamento confirmado, agrupadas por evento.
+// Cada evento exibe totais de adultos, crianças e valor arrecadado, além de
+// uma tabela detalhada com responsável, tipo, quantidade, valor e data.
+// Inclui barra de pesquisa que filtra por evento, responsável, comprador ou ID.
+// Acesso restrito a usuários autenticados com permissão de eventos.
+// =============================================================================
+
 "use client";
- 
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Nav from "../../components/Nav";
 import { getIdTokenOrNull } from "../../lib/authToken";
- 
+
 export default function ReservasEventosPage() {
    const router = useRouter();
    const [loading, setLoading] = useState(true);
@@ -13,6 +23,7 @@ export default function ReservasEventosPage() {
    const [searchTerm, setSearchTerm] = useState("");
    const [error, setError] = useState("");
  
+   // Carrega as reservas da API ao montar. Redireciona se não estiver autenticado.
    useEffect(() => {
        async function init() {
            try {
@@ -51,7 +62,10 @@ export default function ReservasEventosPage() {
  
        init();
    }, [router]);
- 
+
+   // Filtra as reservas conforme o termo de busca.
+   // Se bater no título do evento, mostra o evento inteiro.
+   // Se bater no responsável, comprador ou ID, mostra só as reservas correspondentes.
    useEffect(() => {
        if (!searchTerm.trim()) {
            setFilteredData(data);

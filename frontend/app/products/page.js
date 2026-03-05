@@ -1,3 +1,13 @@
+// =============================================================================
+// products/page.js — Página de produtos (loja + gestão)
+//
+// Essa página tem duas faces: para visitantes, é a vitrine da loja solidária
+// com filtro por categoria, controle de carrinho e botões de compra. Para
+// admins/colaboradores com canEditStore, aparece o formulário de CRUD com
+// suporte a upload de imagem (arquivo ou câmera do dispositivo).
+// O carrinho fica salvo no localStorage e o estado é sincronizado via effects.
+// =============================================================================
+
 "use client";
 
 import { useEffect, useState, useRef } from "react";

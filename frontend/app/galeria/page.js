@@ -1,3 +1,13 @@
+// =============================================================================
+// galeria/page.js — Galeria de fotos da APAE
+//
+// Exibe as fotos cadastradas na coleção "gallery" do Firestore em tempo real
+// (onSnapshot). Suporta filtro por categoria e modal de zoom ao clicar.
+// Admins/colaboradores com canEditEvents podem enviar novas fotos usando
+// upload de arquivo ou captura pela câmera do dispositivo. As imagens são
+// armazenadas no Firebase Storage (pasta gallery/) e a URL salva no Firestore.
+// =============================================================================
+
 "use client";
 
 import { useEffect, useState, useMemo, useRef } from "react";
@@ -59,6 +69,7 @@ export default function GaleriaPage() {
   const isAdmin = roles.includes("admin");
   const isColab = roles.includes("colaborador");
   const canEvents = claims?.canEditEvents === true;
+  // Quem pode enviar fotos: admin, ou colaborador com permissão de eventos
   const canEditGallery = isAdmin || (isColab && canEvents);
 
   useEffect(() => {
@@ -170,6 +181,7 @@ export default function GaleriaPage() {
     }
   };
 
+  // Captura o frame atual do vídeo e converte para arquivo JPEG (qualidade 70%)
   const capturePhoto = () => {
     const video = videoRef.current;
     const canvas = document.createElement("canvas");
@@ -204,6 +216,8 @@ export default function GaleriaPage() {
     stopStream();
     setShowCamera(false);
   };
+  // Faz o upload da foto para o Firebase Storage e salva os metadados no Firestore.
+  // O nome do arquivo no Storage inclui timestamp pra evitar colisões.
   async function handleUpload(e) {
     e.preventDefault();
     setErr("");

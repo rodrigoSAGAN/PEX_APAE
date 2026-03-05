@@ -1,3 +1,12 @@
+// =============================================================================
+// dashboard/page.js — Painel principal do administrador / colaborador
+//
+// Essa é a "home" de quem está logado com permissões. Mostra um resumo
+// rápido com cards de estatísticas (produtos, eventos, usuários, vendas do mês)
+// e links de acesso rápido para as áreas que o usuário tem permissão.
+// Quem pode acessar: admin, ou colaborador com canEditStore ou canEditEvents.
+// =============================================================================
+
 "use client";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
@@ -20,6 +29,8 @@ export default function DashboardPage() {
   const [statsError, setStatsError] = useState("");
   const router = useRouter();
 
+  // Verifica se o usuário logado tem permissão para acessar o dashboard.
+  // A regra é: admin acessa tudo; colaborador só se tiver canEditStore ou canEditEvents.
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) {

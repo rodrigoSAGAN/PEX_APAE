@@ -1,5 +1,13 @@
+// =============================================================================
+// Página inicial do Portal APAE Pinhão.
+// Essa é a landing page principal — mostra carrosséis de fotos da instituição,
+// os próximos eventos (carregados da API), a galeria de fotos com filtros,
+// o projeto da horta, o mapa do Google e um modal explicando como doar
+// via Imposto de Renda. É a vitrine do site pra qualquer visitante.
+// =============================================================================
+
 "use client";
- 
+
 import { useState, useEffect, useCallback } from "react";
 import Nav from "../components/Nav";
 import useEmblaCarousel from "embla-carousel-react";
@@ -80,6 +88,8 @@ export default function HomePage() {
  const scrollNextHorta = useCallback(() => emblaApiHorta && emblaApiHorta.scrollNext(), [emblaApiHorta]);
  const scrollToHorta = useCallback((index) => emblaApiHorta && emblaApiHorta.scrollTo(index), [emblaApiHorta]);
  
+ // Carrega os próximos eventos da API — se não conseguir, usa os eventos padrão.
+ // Filtra só os eventos futuros e pega os 3 mais próximos.
  useEffect(() => {
    async function loadEvents() {
      try {

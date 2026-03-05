@@ -1,3 +1,14 @@
+// =============================================================================
+// pedidos/page.js — Painel de controle de pedidos (entregas)
+//
+// Lista todos os itens de pedidos pagos em tempo real (Firestore onSnapshot).
+// Permite marcar/desmarcar itens como "entregue" com toggle otimista (atualiza
+// UI imediatamente e reverte se a API falhar). Tem abas para filtrar: todas as
+// vendas, pendentes de entrega, entregues e doações. Também registra logs
+// de auditoria quando o status de entrega é alterado.
+// Acesso restrito a admin ou colaboradores com canEditStore.
+// =============================================================================
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -77,6 +88,9 @@ export default function PedidosPage() {
     return () => window.removeEventListener("resize", checkSize);
   }, []);
 
+  // Escuta em tempo real (onSnapshot) todos os pedidos pagos do Firestore.
+  // Filtra apenas os que estão com status de pagamento confirmado (paid/approved/pago)
+  // e "achata" os itens de cada pedido em uma lista linear para exibição na tabela.
   useEffect(() => {
     if (!authorized) return;
 
@@ -169,6 +183,8 @@ export default function PedidosPage() {
     setFilteredItems(res);
   }, [soldItems, activeTab]);
 
+  // Toggle otimista: atualiza a UI imediatamente e depois chama a API.
+  // Se a API falhar, reverte pro estado anterior. Também registra um log de auditoria.
   const toggleDelivered = async (item) => {
     const originalItems = [...soldItems];
     const updatedItems = soldItems.map((i) => {
@@ -228,6 +244,8 @@ export default function PedidosPage() {
     }
   };
 
+  // Cria um pedido falso no Firestore para fins de teste — útil para verificar
+  // se o fluxo de exibição e entrega está funcionando sem precisar fazer um PIX real.
   const simulateSale = async () => {
     if (!confirm("Confirmar simulação de venda? Isso criará um pedido falso no banco de dados.")) return;
 

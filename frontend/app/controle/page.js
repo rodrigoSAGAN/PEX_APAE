@@ -1,3 +1,15 @@
+// =============================================================================
+// controle/page.js — Painel de controle de permissões (admin-only)
+//
+// Área exclusiva para administradores: lista todos os usuários do sistema
+// e permite conceder/revogar duas permissões granulares:
+//   - canEditStore: permite editar produtos na loja (cozinha)
+//   - canEditEvents: permite editar eventos
+// Quando uma permissão é concedida, o backend adiciona automaticamente o
+// papel "colaborador" ao usuário. Quando ambas são revogadas, o papel é
+// removido. Admins não podem ter suas permissões alteradas por aqui.
+// =============================================================================
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -24,6 +36,7 @@ export default function ControlePage() {
   console.log("[controle] componente montado");
 
 
+  // Busca a lista de todos os usuários do sistema via API (requer token de admin)
   async function loadUsers(firebaseUser) {
     console.log("[controle] loadUsers() chamado");
     setErr("");
@@ -63,6 +76,8 @@ export default function ControlePage() {
   }
 
 
+  // Alterna a permissão de edição da loja (canEditStore) para o usuário selecionado.
+  // Pede confirmação antes e atualiza o estado local com a resposta da API.
   async function toggleStorePermission(user, firebaseUser) {
     const next = !user.canEditStore;
 
@@ -125,6 +140,7 @@ export default function ControlePage() {
   }
 
   
+  // Alterna a permissão de edição de eventos (canEditEvents) para o usuário selecionado
   async function toggleEventsPermission(user, firebaseUser) {
     const next = !user.canEditEvents;
 

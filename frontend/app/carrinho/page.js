@@ -1,3 +1,17 @@
+// =============================================================================
+// carrinho/page.js — Página do carrinho de compras (visitantes)
+//
+// Esse carrinho é 100% client-side: os itens ficam no localStorage e só
+// visitantes (não logados) podem comprar. Se um admin/colaborador tentar
+// acessar, é redirecionado de volta. Suporta 3 tipos de item:
+//   - Produtos normais da loja (buscados em /api/products)
+//   - Ingressos de eventos (adulto/criança, buscados em /api/events)
+//   - Doações solidárias (valores fixos de R$10, R$30 e R$100)
+//
+// Ao finalizar, cria o pedido via /api/orders e gera o PIX via /api/pix.
+// O QR Code e o código copia-e-cola são exibidos em um modal de agradecimento.
+// =============================================================================
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -8,6 +22,7 @@ import Nav from "../../components/Nav";
 import { getIdTokenOrNull } from "../../lib/authToken";
 import { useModal } from "../../components/ModalContext";
 
+// Itens de doação com valores fixos — aparecem na seção de doações do carrinho
 const DONATION_ITEMS = {
   "donation-10": {
     id: "donation-10",
@@ -49,6 +64,8 @@ export default function CartPage() {
 
   const API = "/api/products";
 
+  // Se o usuário estiver logado, redireciona — o carrinho é exclusivo pra visitantes.
+  // Isso evita que admins/colaboradores comprem acidentalmente pelo painel.
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -61,6 +78,8 @@ export default function CartPage() {
     return () => unsub();
   }, [router, showModal]);
 
+  // Carrega o carrinho do localStorage na montagem.
+  // readyToPersist só fica true depois disso, pra não sobrescrever com objeto vazio.
   useEffect(() => {
     try {
       const raw =
@@ -93,6 +112,9 @@ export default function CartPage() {
   }, [cartMap, readyToPersist]);
 
 
+  // Monta a lista de itens do carrinho buscando os dados completos das APIs.
+  // Para cada ID no cartMap, verifica se é doação, evento ou produto normal
+  // e busca os dados correspondentes. Também carrega metadados (ex: nome do responsável da reserva).
   useEffect(() => {
     async function load() {
       setErr("");
@@ -278,6 +300,7 @@ export default function CartPage() {
     }
   }
 
+  // Dados do formulário de checkout: nome de quem retira e WhatsApp (opcional)
   const [pickupName, setPickupName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
 
@@ -294,6 +317,9 @@ export default function CartPage() {
     setWhatsapp(val);
   }
 
+  // Fluxo de checkout: valida dados → cria pedido via API → gera PIX → mostra modal.
+  // Se o usuário estiver logado, envia o token no header (compra autenticada).
+  // Se não, a compra é como visitante (sem token).
   async function handleCheckout() {
     try {
       setErr("");

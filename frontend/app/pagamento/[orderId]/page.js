@@ -1,3 +1,12 @@
+// =============================================================================
+// pagamento/[orderId]/page.js — Página de acompanhamento do pagamento PIX
+//
+// Após o usuário gerar um PIX no carrinho, ele pode ser redirecionado pra cá.
+// A página faz polling a cada 3 segundos no endpoint /api/payments/status/:id
+// para verificar se o pagamento foi aprovado, rejeitado ou ainda está pendente.
+// Quando o status muda, a UI atualiza automaticamente mostrando o resultado.
+// =============================================================================
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -10,6 +19,9 @@ export default function PagamentoPage({ params }) {
     const [loading, setLoading] = useState(true);
     const orderId = params.orderId;
 
+    // Polling a cada 3 segundos para verificar se o PIX foi aprovado.
+    // Quando o status muda de "pending" para "approved" ou "rejected",
+    // para o polling e atualiza a UI automaticamente.
     useEffect(() => {
         if (!orderId) return;
 

@@ -1,3 +1,11 @@
+// =============================================================================
+// forgot-password/page.js — Página de recuperação de senha
+//
+// O usuário informa o e-mail e recebe um link de redefinição via Firebase Auth.
+// Tratamos os erros comuns (e-mail inválido, usuário não encontrado, muitas
+// tentativas) com mensagens amigáveis. O link redireciona de volta para /login.
+// =============================================================================
+
 "use client";
 import { useState } from "react";
 import { getAuth, sendPasswordResetEmail } from "firebase/auth";
@@ -11,12 +19,14 @@ export default function ForgotPasswordPage() {
   const [err, setErr] = useState("");
   const [focus, setFocus] = useState({ email: false });
 
+  // URL de retorno após o usuário redefinir a senha — volta pro login
   const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const actionCodeSettings = {
     url: `${APP_URL}/login`,
     handleCodeInApp: false,
   };
 
+  // Envia o e-mail de redefinição e trata erros específicos do Firebase
   async function handleSubmit(e) {
     e.preventDefault();
     setErr("");

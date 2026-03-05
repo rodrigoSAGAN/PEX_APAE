@@ -1,3 +1,14 @@
+// =============================================================================
+// relatorios/page.js — Página de relatórios de vendas (admin-only)
+//
+// Oferece uma visão completa das vendas da loja solidária:
+//   - Cards de resumo do mês (pedidos, itens vendidos, faturamento, doações)
+//   - Relatório avançado filtrado por mês/ano ou todos os meses agrupados
+//   - Exportação para PDF (usando jsPDF + autotable, carregados dinamicamente)
+//   - Seção de logs de auditoria com toggle expandir/colapsar
+// Acesso restrito a administradores.
+// =============================================================================
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -122,6 +133,9 @@ export default function RelatoriosPage() {
     loadLogs();
   }, [ready]);
 
+  // Gera o relatório avançado conforme os filtros selecionados.
+  // Se "todos os meses" estiver marcado, busca /api/sales/by-month (agrupado por ano/mês).
+  // Senão, busca /api/sales?month=X&year=Y (lista simples do mês escolhido).
   const handleGenerateReport = async () => {
     try {
       setReportError("");
@@ -154,6 +168,9 @@ export default function RelatoriosPage() {
     }
   };
 
+  // Gera e baixa o relatório em PDF usando jsPDF + autotable.
+  // Essas libs são carregadas dinamicamente (import()) pra não pesar no bundle principal.
+  // O PDF inclui: cabeçalho, tabela de itens por pedido e resumo geral no final.
   const handleDownloadPDF = async () => {
     if (!reportData || !Array.isArray(reportData) || reportData.length === 0) {
       alert("Nenhum dado disponível para gerar o PDF. Gere um relatório primeiro.");

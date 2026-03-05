@@ -1,3 +1,11 @@
+// =============================================================================
+// register/page.js — Página de cadastro de novo usuário
+//
+// Aqui o visitante cria uma conta com e-mail e senha usando o Firebase Auth.
+// Após o registro, o displayName é atualizado (se informado) e o usuário
+// é redirecionado para /home. Também oferece links para login e recuperação.
+// =============================================================================
+
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -15,6 +23,8 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
+  // Cria o usuário no Firebase Auth e atualiza o displayName se informado.
+  // Após o registro, redireciona direto pra /home.
   async function onSubmit(e) {
     e.preventDefault();
     setErr("");
