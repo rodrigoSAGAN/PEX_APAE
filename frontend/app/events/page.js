@@ -574,7 +574,7 @@ export default function EventsPage() {
                        alt="Preview"
                        className="w-full h-full object-cover"
                        onError={(e) => {
-                         e.target.src = "/images/imagem-erro.jpeg";
+                         e.target.src = "/images/imagem-erro.webp";
                        }}
                      />
                    </div>
@@ -638,11 +638,11 @@ export default function EventsPage() {
  
                    <div className="relative h-48 w-full overflow-hidden bg-slate-100">
                      <img
-                       src={ev.coverImage || "/images/imagem-erro.jpeg"}
+                       src={ev.coverImage || "/images/imagem-erro.webp"}
                        alt={ev.title || "Evento"}
                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                        onError={(e) => {
-                         e.target.src = "/images/imagem-erro.jpeg";
+                         e.target.src = "/images/imagem-erro.webp";
                        }}
                      />
                    </div>
@@ -746,7 +746,7 @@ export default function EventsPage() {
  
          <div className="mt-12 mb-8 max-w-4xl mx-auto rounded-3xl overflow-hidden shadow-2xl border border-slate-200">
            <img
-             src="/images/info.jpg"
+             src="/images/info.webp"
              alt="Informações APAE-Pinhão"
              className="w-full h-auto object-cover hover:scale-105 transition-transform duration-700"
            />
@@ -763,11 +763,11 @@ export default function EventsPage() {
            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-zoom-in">
              <div className="relative h-40 bg-slate-100">
                <img
-                 src={selectedEvent.coverImage || "/images/imagem-erro.jpeg"}
+                 src={selectedEvent.coverImage || "/images/imagem-erro.webp"}
                  alt={selectedEvent.title}
                  className="w-full h-full object-cover"
                  onError={(e) => {
-                   e.target.src = "/images/imagem-erro.jpeg";
+                   e.target.src = "/images/imagem-erro.webp";
                  }}
                />
                <button

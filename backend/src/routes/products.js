@@ -116,8 +116,9 @@ async function requireAdmin(req, res, next) {
 // Lista todos os produtos (público, qualquer pessoa pode ver).
 router.get("/", async (_req, res) => {
   try {
-    const snap = await db.collection("products").get();
+    const snap = await db.collection("products").orderBy("createdAt", "desc").get();
     const items = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    res.set("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
     res.json(items);
   } catch (e) {
     console.error("[products] GET / error:", e);
@@ -195,7 +196,8 @@ router.post("/", requireAdmin, upload.single("image"), async (req, res) => {
 
     const ref = await db.collection("products").add(payload);
 
-    await writeAuditLog({
+    // fire-and-forget — audit log é não-crítico, não bloqueia a resposta
+    writeAuditLog({
       req,
       type: "product",
       action: "create",
@@ -277,15 +279,17 @@ router.put("/:id", requireAdmin, upload.single("image"), async (req, res) => {
     up.updatedBy = req.user?.uid || null;
 
     await ref.update(up);
-    const final = await ref.get();
-    const afterData = { id: final.id, ...final.data() };
 
-    await writeAuditLog({
+    // Monta resposta sem re-leitura do Firestore
+    const afterData = { ...beforeData, ...up };
+
+    // fire-and-forget — audit log é não-crítico, não bloqueia a resposta
+    writeAuditLog({
       req,
       type: "product",
       action: "update",
-      entityId: final.id,
-      entityName: afterData.name || afterData.title || final.id,
+      entityId: beforeData.id,
+      entityName: afterData.name || afterData.title || beforeData.id,
       before: beforeData,
       after: afterData,
     });
@@ -308,7 +312,8 @@ router.delete("/:id", requireAdmin, async (req, res) => {
 
     await ref.delete();
 
-    await writeAuditLog({
+    // fire-and-forget — audit log é não-crítico, não bloqueia a resposta
+    writeAuditLog({
       req,
       type: "product",
       action: "delete",

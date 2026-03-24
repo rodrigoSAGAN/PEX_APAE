@@ -136,7 +136,7 @@ export default function DashboardPage() {
   const bgImageOverlay = {
     position: "absolute",
     inset: 0,
-    backgroundImage: "url(/images/logo22.JPG)",
+    backgroundImage: "url(/images/logo22.webp)",
     backgroundSize: "cover",
     backgroundPosition: "center",
     opacity: 0.2,

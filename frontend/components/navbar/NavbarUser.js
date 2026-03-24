@@ -208,7 +208,7 @@ export default function NavbarUser({ user, handleLogout }) {
       <div style={wrap}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <Link href="/">
-            <img src="/images/logo7.jpg" alt="Logo APAE" style={brandLogo} />
+            <img src="/images/logo7.webp" alt="Logo APAE" style={brandLogo} />
           </Link>
           <Link href="/" style={brand}>APAE – Pinhão</Link>
         </div>

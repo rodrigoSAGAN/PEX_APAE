@@ -90,6 +90,7 @@ router.get("/", async (_req, res) => {
       ...doc.data(),
     }));
 
+    res.set("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
     res.json(list);
   } catch (e) {
     console.error("GET /api/events error:", e);
@@ -113,9 +114,9 @@ router.post("/", requireEventsEditor, async (req, res) => {
 
     const now = new Date().toISOString();
 
-    const docRef = await db.collection("events").add({
+    const payload = {
       title: title.trim(),
-      date: date || null, 
+      date: date || null,
       location: location || null,
       description: description || null,
       coverImage: coverImage || null,
@@ -125,17 +126,20 @@ router.post("/", requireEventsEditor, async (req, res) => {
       createdAt: now,
       updatedAt: now,
       active: true,
-    });
+    };
 
-    const created = await docRef.get();
-    const data = { id: created.id, ...created.data() };
+    const docRef = await db.collection("events").add(payload);
 
-    await writeAuditLog({
+    // Monta resposta sem re-leitura do Firestore
+    const data = { id: docRef.id, ...payload };
+
+    // fire-and-forget — audit log é não-crítico, não bloqueia a resposta
+    writeAuditLog({
       req,
       type: "event",
       action: "create",
-      entityId: created.id,
-      entityName: data.title || created.id,
+      entityId: docRef.id,
+      entityName: data.title || docRef.id,
       before: null,
       after: data,
     });
@@ -192,10 +196,11 @@ router.put("/:id", requireEventsEditor, async (req, res) => {
 
     await docRef.update(updateData);
 
-    const updated = await docRef.get();
-    const afterData = { id: updated.id, ...updated.data() };
+    // Monta resposta sem re-leitura do Firestore
+    const afterData = { ...beforeData, ...updateData };
 
-    await writeAuditLog({
+    // fire-and-forget — audit log é não-crítico, não bloqueia a resposta
+    writeAuditLog({
       req,
       type: "event",
       action: "update",
@@ -230,7 +235,8 @@ router.delete("/:id", requireEventsEditor, async (req, res) => {
 
     await docRef.delete();
 
-    await writeAuditLog({
+    // fire-and-forget — audit log é não-crítico, não bloqueia a resposta
+    writeAuditLog({
       req,
       type: "event",
       action: "delete",

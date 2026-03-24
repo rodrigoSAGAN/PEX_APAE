@@ -7,6 +7,7 @@
 
 import express from "express";
 import cors from "cors";
+import compression from "compression";
 import path from "path";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
@@ -57,6 +58,9 @@ app.use(cors({
     }
   },
 }));
+
+// Compressão gzip/brotli para todas as respostas — reduz ~70-90% do tamanho do JSON
+app.use(compression());
 
 // IMPORTANTE: O webhook fica ANTES do express.json() porque ele precisa do body
 // "cru" (raw) pra validar a assinatura de segurança do Mercado Pago.

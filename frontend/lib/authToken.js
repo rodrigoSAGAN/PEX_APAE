@@ -12,23 +12,17 @@
 import { getAuth } from "firebase/auth";
 
 // Tenta obter o ID Token do usuário autenticado no Firebase.
-// Força a renovação do token (true) pra garantir que ele esteja válido.
+// Usa o token em cache (sem forçar refresh) — o SDK renova automaticamente.
 // Retorna null caso não haja usuário logado ou ocorra algum erro.
 export async function getIdTokenOrNull() {
   try {
     const auth = getAuth();
     const user = auth.currentUser;
 
-    // Se não tem ninguém logado, não tem token pra retornar
-    if (!user) {
-      console.log("[authToken] Nenhum usuário logado (currentUser = null)");
-      return null;
-    }
+    if (!user) return null;
 
-    // Força refresh do token pra evitar token expirado
-    const token = await user.getIdToken(true);
-
-    console.log("[authToken] Token obtido com sucesso para UID:", user.uid);
+    // Usa o token em cache; o SDK renova automaticamente quando próximo do vencimento
+    const token = await user.getIdToken();
     return token;
   } catch (e) {
     console.error("[authToken] Erro ao obter ID token:", e);

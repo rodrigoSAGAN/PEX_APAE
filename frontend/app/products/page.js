@@ -10,7 +10,7 @@
 
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Nav from "../../components/Nav";
@@ -133,8 +133,7 @@ export default function ProductsPage() {
 
     const newCart = { ...cart, [product.id]: newQ };
     setCart(newCart);
-    localStorage.setItem("portal-apae-cart", JSON.stringify(newCart));
-
+    // O useEffect de persistência já salva no localStorage quando cart muda
     router.push("/carrinho");
   }
 
@@ -315,12 +314,14 @@ export default function ProductsPage() {
   }
 
   // Filtra os produtos conforme a categoria selecionada.
-  // Comparamos em lowercase para evitar problemas de capitalização inconsistente no banco.
-  const filteredItems = items.filter((p) => {
-    if (filterClass === "all") return true;
-    const cat = (p.category || "").toString().toLowerCase();
-    return cat === filterClass;
-  });
+  // useMemo evita recalcular a cada re-render quando items e filterClass não mudaram.
+  const filteredItems = useMemo(() => {
+    if (filterClass === "all") return items;
+    return items.filter((p) => {
+      const cat = (p.category || "").toString().toLowerCase();
+      return cat === filterClass;
+    });
+  }, [items, filterClass]);
 
   // Detecta se o usuário está em um dispositivo móvel para ajustar o layout.
   // A sidebar de administração só aparece em telas maiores (desktop)
@@ -355,7 +356,7 @@ export default function ProductsPage() {
 
     const newCart = { ...cart, [product.id]: newQ };
     setCart(newCart);
-    localStorage.setItem("portal-apae-cart", JSON.stringify(newCart));
+    // O useEffect de persistência já salva no localStorage quando cart muda
   }
 
   // Remove 1 unidade do carrinho. Se chegar a zero, remove a chave do objeto
@@ -380,7 +381,7 @@ export default function ProductsPage() {
     }
 
     setCart(newCart);
-    localStorage.setItem("portal-apae-cart", JSON.stringify(newCart));
+    // O useEffect de persistência já salva no localStorage quando cart muda
   }
 
   // Solicita acesso à câmera do dispositivo para tirar foto do produto.
@@ -698,7 +699,7 @@ export default function ProductsPage() {
                       alt="Pré-visualização"
                       className="w-24 h-24 object-cover rounded-xl border border-slate-200 mx-auto shadow-sm"
                       onError={(e) => {
-                        e.currentTarget.src = "/images/imagem-erro.jpeg";
+                        e.currentTarget.src = "/images/imagem-erro.webp";
                         e.currentTarget.onerror = null;
                       }}
                     />
@@ -764,11 +765,11 @@ export default function ProductsPage() {
                     >
                       <div className="relative w-full pt-[75%] bg-slate-50 overflow-hidden">
                         <img
-                          src={p.imageUrl || "/images/imagem-erro.jpeg"}
+                          src={p.imageUrl || "/images/imagem-erro.webp"}
                           alt={p.name || p.title || "Produto"}
                           className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                           onError={(e) => {
-                            e.currentTarget.src = "/images/imagem-erro.jpeg";
+                            e.currentTarget.src = "/images/imagem-erro.webp";
                             e.currentTarget.onerror = null;
                           }}
                         />

@@ -8,47 +8,51 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Nav from "../components/Nav";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
  
 const SLIDES_MAIN = [
- { src: "/images/faxada.JPG", title: "APAE – Pinhão", caption: "Vista da fachada da instituição, acolhendo a comunidade de Pinhão." },
- { src: "/images/patio1.JPG", title: "Pátio externo", caption: "Espaço para convivência, atividades recreativas e eventos." },
- { src: "/images/patio2.JPG", title: "Ambientes de integração", caption: "Áreas utilizadas em projetos pedagógicos e ações inclusivas." },
- { src: "/images/patio3.JPG", title: "Estrutura acolhedora", caption: "Ambiente pensado para o bem-estar das pessoas atendidas." },
+ { src: "/images/faxada.webp", title: "APAE – Pinhão", caption: "Vista da fachada da instituição, acolhendo a comunidade de Pinhão." },
+ { src: "/images/patio1.webp", title: "Pátio externo", caption: "Espaço para convivência, atividades recreativas e eventos." },
+ { src: "/images/patio2.webp", title: "Ambientes de integração", caption: "Áreas utilizadas em projetos pedagógicos e ações inclusivas." },
+ { src: "/images/patio3.webp", title: "Estrutura acolhedora", caption: "Ambiente pensado para o bem-estar das pessoas atendidas." },
 ];
  
 const SLIDES_HORTA = [
- { src: "/images/horta1.JPG", title: "Horta comunitária", caption: "Cultivo realizado com participação dos atendidos e equipe." },
- { src: "/images/horta2.JPG", title: "Aprendizado na prática", caption: "A horta contribui para educação ambiental e alimentação saudável." },
- { src: "/images/horta3.JPG", title: "Cuidado e inclusão", caption: "Atividades que estimulam autonomia, convivência e responsabilidade." },
+ { src: "/images/horta1.webp", title: "Horta comunitária", caption: "Cultivo realizado com participação dos atendidos e equipe." },
+ { src: "/images/horta2.webp", title: "Aprendizado na prática", caption: "A horta contribui para educação ambiental e alimentação saudável." },
+ { src: "/images/horta3.webp", title: "Cuidado e inclusão", caption: "Atividades que estimulam autonomia, convivência e responsabilidade." },
 ];
  
 const EVENTS = [
- { date: "25/11/2025", title: "Bazar de Natal Solidário", desc: "Venda de artigos e produtos da loja APAE – Pinhão.", tag: "Comunidade", image: "/images/patio1.JPG" },
- { date: "03/12/2025", title: "Dia Internacional da Pessoa com Deficiência", desc: "Oficinas, apresentações e ações de conscientização.", tag: "Conscientização", image: "/images/patio2.JPG" },
- { date: "15/12/2025", title: "Feira de Produtos da APAE – Pinhão", desc: "Exposição dos itens cadastrados no Portal APAE.", tag: "Loja APAE", image: "/images/patio3.JPG" },
+ { date: "25/11/2025", title: "Bazar de Natal Solidário", desc: "Venda de artigos e produtos da loja APAE – Pinhão.", tag: "Comunidade", image: "/images/patio1.webp" },
+ { date: "03/12/2025", title: "Dia Internacional da Pessoa com Deficiência", desc: "Oficinas, apresentações e ações de conscientização.", tag: "Conscientização", image: "/images/patio2.webp" },
+ { date: "15/12/2025", title: "Feira de Produtos da APAE – Pinhão", desc: "Exposição dos itens cadastrados no Portal APAE.", tag: "Loja APAE", image: "/images/patio3.webp" },
 ];
- 
+
+// Fora do componente — array estático, não precisa ser recriado a cada render
+const GALLERY_IMAGES = [
+  { src: "/images/galeria/1.webp", category: "Eventos", label: "Festa Junina 2024" },
+  { src: "/images/horta1.webp", category: "Atividades Pedagógicas", label: "Aula de Artes" },
+  { src: "/images/patio.webp", category: "Momentos Especiais", label: "Visita ao Parque" },
+  { src: "/images/galeria/2.webp", category: "Eventos", label: "Dia das Crianças" },
+  { src: "/images/horta2.webp", category: "Atividades Pedagógicas", label: "Horta Comunitária" },
+  { src: "/images/galeria/3.webp", category: "Momentos Especiais", label: "Apresentação de Natal" },
+];
+
 export default function HomePage() {
  const [homeEvents, setHomeEvents] = useState(EVENTS);
  const [showTaxModal, setShowTaxModal] = useState(false);
  const [galleryFilter, setGalleryFilter] = useState("Todos");
  
- const galleryImages = [
-   { src: "/images/galeria/1.jpg", category: "Eventos", label: "Festa Junina 2024" },
-   { src: "/images/horta1.JPG", category: "Atividades Pedagógicas", label: "Aula de Artes" },
-   { src: "/images/patio.JPG", category: "Momentos Especiais", label: "Visita ao Parque" },
-   { src: "/images/galeria/2.jpg", category: "Eventos", label: "Dia das Crianças" },
-   { src: "/images/horta2.JPG", category: "Atividades Pedagógicas", label: "Horta Comunitária" },
-   { src: "/images/galeria/3.jpg", category: "Momentos Especiais", label: "Apresentação de Natal" },
- ];
- 
- const filteredImages = galleryFilter === "Todos"
-   ? galleryImages
-   : galleryImages.filter(img => img.category === galleryFilter);
+ const filteredImages = useMemo(
+   () => galleryFilter === "Todos"
+     ? GALLERY_IMAGES
+     : GALLERY_IMAGES.filter(img => img.category === galleryFilter),
+   [galleryFilter]
+ );
  
  const [emblaRefMain, emblaApiMain] = useEmblaCarousel({ loop: true }, [Autoplay({ delay: 6000 })]);
  const [selectedIndexMain, setSelectedIndexMain] = useState(0);
@@ -224,9 +228,10 @@ export default function HomePage() {
                    <img
                      src={ev.image}
                      alt={ev.title}
+                     loading="lazy"
                      className="w-full h-full object-cover"
                      onError={(e) => {
-                       e.currentTarget.src = "/images/imagem-erro.jpeg";
+                       e.currentTarget.src = "/images/imagem-erro.webp";
                        e.currentTarget.onerror = null;
                      }}
                    />
@@ -348,7 +353,8 @@ export default function HomePage() {
                <img
                  src={img.src}
                  alt={img.label}
-                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 bg-slate-200" onError={(e) => { e.currentTarget.src = "/images/imagem-erro.jpeg"; e.currentTarget.onerror = null; }}
+                 loading="lazy"
+                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 bg-slate-200" onError={(e) => { e.currentTarget.src = "/images/imagem-erro.webp"; e.currentTarget.onerror = null; }}
                />
  
                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-6">

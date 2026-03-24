@@ -668,11 +668,11 @@ export default function GaleriaPage() {
                     onClick={() => it.imageUrl && setZoomItem(it)}
                   >
                       <img
-                        src={it.imageUrl || "/images/imagem-erro.jpeg"}
+                        src={it.imageUrl || "/images/imagem-erro.webp"}
                         alt={it.title}
                         style={imgBox}
                         onError={(e) => {
-                          e.currentTarget.src = "/images/imagem-erro.jpeg";
+                          e.currentTarget.src = "/images/imagem-erro.webp";
                           e.currentTarget.onerror = null;
                         }}
                       />
@@ -699,7 +699,7 @@ export default function GaleriaPage() {
                   alt={zoomItem.title}
                   style={modalImg}
                   onError={(e) => {
-                    e.currentTarget.src = "/images/imagem-erro.jpeg";
+                    e.currentTarget.src = "/images/imagem-erro.webp";
                     e.currentTarget.onerror = null;
                   }}
                 />

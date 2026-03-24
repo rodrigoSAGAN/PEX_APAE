@@ -14,7 +14,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "../../lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -29,21 +29,21 @@ const DONATION_ITEMS = {
     name: "Doação solidária - R$ 10,00",
     price: 10,
     category: "Doação",
-    imageUrl: "/images/flor11.png",
+    imageUrl: "/images/flor11.webp",
   },
   "donation-30": {
     id: "donation-30",
     name: "Doação solidária - R$ 30,00",
     price: 30,
     category: "Doação",
-    imageUrl: "/images/flor22.png",
+    imageUrl: "/images/flor22.webp",
   },
   "donation-100": {
     id: "donation-100",
     name: "Doação solidária - R$ 100,00",
     price: 100,
     category: "Doação",
-    imageUrl: "/images/flor33.png",
+    imageUrl: "/images/flor33.webp",
   },
 };
 
@@ -192,7 +192,7 @@ export default function CartPage() {
                 name: `${event.title} - ${isChild ? "Criança" : "Adulto"}`,
                 price,
                 category: "Evento",
-                imageUrl: event.coverImage || "/images/imagem-erro.jpeg",
+                imageUrl: event.coverImage || "/images/imagem-erro.webp",
                 eventId: event.id,
                 eventTitle: event.title,
                 eventDate: event.date,
@@ -239,10 +239,13 @@ export default function CartPage() {
     });
   }
 
-  const total = items.reduce((acc, item) => {
-    const price = Number(item.product.price) || 0;
-    return acc + price * item.quantity;
-  }, 0);
+  const total = useMemo(
+    () => items.reduce((acc, item) => {
+      const price = Number(item.product.price) || 0;
+      return acc + price * item.quantity;
+    }, 0),
+    [items]
+  );
 
   function removeFromCart(productId) {
     setCartMap((prev) => {
@@ -494,7 +497,7 @@ export default function CartPage() {
                     alt={item.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     onError={(e) => {
-                      e.currentTarget.src = "/images/imagem-erro.jpeg";
+                      e.currentTarget.src = "/images/imagem-erro.webp";
                       e.currentTarget.onerror = null;
                     }}
                   />
@@ -581,11 +584,11 @@ export default function CartPage() {
                           <td className="py-4 px-6">
                             <div className="flex items-center gap-4">
                               <img
-                                src={p.imageUrl || "/images/imagem-erro.jpeg"}
+                                src={p.imageUrl || "/images/imagem-erro.webp"}
                                 alt={p.name || p.title || "Produto"}
                                 className="w-14 h-14 rounded-lg object-cover border border-slate-200 shadow-sm"
                                 onError={(e) => {
-                                  e.currentTarget.src = "/images/imagem-erro.jpeg";
+                                  e.currentTarget.src = "/images/imagem-erro.webp";
                                   e.currentTarget.onerror = null;
                                 }}
                               />

@@ -11,7 +11,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Nav from "../../components/Nav";
 import SideMenu from "../../components/SideMenu";
 import { db, auth } from "../../lib/firebase";
@@ -34,7 +34,6 @@ import { useModal } from "../../components/ModalContext";
 export default function PedidosPage() {
   const { showModal } = useModal();
   const [soldItems, setSoldItems] = useState([]);
-  const [filteredItems, setFilteredItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isMobile, setIsMobile] = useState(false);
@@ -169,18 +168,12 @@ export default function PedidosPage() {
     return () => unsubscribe();
   }, [authorized]);
 
-  useEffect(() => {
-    let res = [...soldItems];
-
-    if (activeTab === "donations") {
-      res = res.filter((i) => i.isDonation);
-    } else if (activeTab === "todo") {
-      res = res.filter((i) => !i.delivered && !i.isDonation);
-    } else if (activeTab === "done") {
-      res = res.filter((i) => i.delivered);
-    }
-
-    setFilteredItems(res);
+  // useMemo substitui o useEffect + estado derivado — evita double-render a cada mudança
+  const filteredItems = useMemo(() => {
+    if (activeTab === "donations") return soldItems.filter((i) => i.isDonation);
+    if (activeTab === "todo") return soldItems.filter((i) => !i.delivered && !i.isDonation);
+    if (activeTab === "done") return soldItems.filter((i) => i.delivered);
+    return soldItems;
   }, [soldItems, activeTab]);
 
   // Toggle otimista: atualiza a UI imediatamente e depois chama a API.

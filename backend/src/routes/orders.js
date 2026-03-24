@@ -220,70 +220,37 @@ async function optionalAuth(req, res, next) {
 // caso algo dê errado no fluxo de compra.
 router.post("/", optionalAuth, async (req, res) => {
   try {
-    console.log("[orders] POST / - Recebendo requisição");
-    console.log("[orders] Headers:", JSON.stringify(req.headers, null, 2));
-    console.log("[orders] Body recebido:", JSON.stringify(req.body, null, 2));
-    console.log("[orders] User autenticado:", req.user ? req.user.uid : "NÃO");
-
     const { items, totalValue, pickupName, phoneWhatsApp } = req.body || {};
 
-    if (!Array.isArray(items)) {
-      console.error("[orders] ERRO: items não é um array:", typeof items);
+    if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
         error: "items_required",
-        message: "O campo 'items' deve ser um array de produtos."
+        message: "O campo 'items' deve ser um array não vazio de produtos."
       });
     }
-
-    if (items.length === 0) {
-      console.error("[orders] ERRO: items está vazio");
-      return res.status(400).json({
-        error: "items_required",
-        message: "O carrinho está vazio. Adicione pelo menos um produto."
-      });
-    }
-
-    console.log("[orders] ✓ Validação items OK:", items.length, "itens");
-
-    console.log("[orders] totalValue recebido:", totalValue, "tipo:", typeof totalValue);
 
     const numericTotal = Number(totalValue);
 
     if (typeof totalValue !== "number" && typeof totalValue !== "string") {
-      console.error("[orders] ERRO: totalValue não é number nem string:", typeof totalValue);
       return res.status(400).json({
         error: "invalid_totalValue",
         message: "O campo 'totalValue' deve ser um número."
       });
     }
 
-    if (Number.isNaN(numericTotal)) {
-      console.error("[orders] ERRO: totalValue não pode ser convertido para número:", totalValue);
+    if (Number.isNaN(numericTotal) || numericTotal <= 0) {
       return res.status(400).json({
         error: "invalid_totalValue",
-        message: "O valor total é inválido."
+        message: "O valor total é inválido ou menor que zero."
       });
     }
-
-    if (numericTotal <= 0) {
-      console.error("[orders] ERRO: totalValue é menor ou igual a zero:", numericTotal);
-      return res.status(400).json({
-        error: "invalid_totalValue",
-        message: "O valor total deve ser maior que zero."
-      });
-    }
-
-    console.log("[orders] ✓ Validação totalValue OK:", numericTotal);
 
     if (!req.user && (!pickupName || !pickupName.trim())) {
-      console.error("[orders] ERRO: pickupName vazio e usuário não autenticado");
       return res.status(400).json({
         error: "pickup_name_required",
         message: "Para comprar sem login, informe o Nome de Retirada."
       });
     }
-
-    console.log("[orders] ✓ Validação pickupName OK:", pickupName || "(usuário autenticado)");
 
     const payload = {
       items,
@@ -295,19 +262,14 @@ router.post("/", optionalAuth, async (req, res) => {
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
-    console.log("[orders] Payload a ser salvo no Firestore:", JSON.stringify(payload, null, 2));
-
-    console.log("[orders] Salvando no Firestore...");
     const docRef = await db.collection("orders").add(payload);
-    console.log("[orders] ✅ Pedido salvo com sucesso! ID:", docRef.id);
 
     return res.status(201).json({
       id: docRef.id,
       message: "Pedido registrado com sucesso",
     });
   } catch (e) {
-    console.error("[orders] ❌ POST / error:", e);
-    console.error("[orders] Stack trace:", e.stack);
+    console.error("[orders] POST / error:", e.message);
     return res.status(500).json({
       error: "internal_error",
       message: e.message || "Erro interno ao processar o pedido.",
