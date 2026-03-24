@@ -54,8 +54,13 @@ const rootDir = process.cwd();
 const uploadsDir = path.join(rootDir, "uploads");
 const productsDir = path.join(uploadsDir, "products");
 
-if (!fs.existsSync(productsDir)) {
-  fs.mkdirSync(productsDir, { recursive: true });
+try {
+  if (!fs.existsSync(productsDir)) {
+    fs.mkdirSync(productsDir, { recursive: true });
+  }
+} catch (_) {
+  // No Vercel o sistema de arquivos é somente leitura — uploads locais não funcionam.
+  // Imagens de produtos precisarão ser migradas para Firebase Storage futuramente.
 }
 
 // Configuração do Multer pra salvar as imagens com nomes únicos,
