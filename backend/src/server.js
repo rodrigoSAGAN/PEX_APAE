@@ -44,6 +44,8 @@ const app = express();
 // Libera o CORS apenas para origens conhecidas.
 const allowedOrigins = [
   "https://pex-apae.vercel.app",
+  "https://apaepinhao.com.br",
+  "https://www.apaepinhao.com.br",
   "http://localhost:3000",
 ];
 app.use(cors({
