@@ -15,11 +15,17 @@ const __dirname = path.dirname(__filename);
 // Em produção (ex: Cloud Run, Render), a variável de ambiente GOOGLE_APPLICATION_CREDENTIALS
 // aponta para o arquivo de credenciais — não precisamos expor o arquivo no repositório.
 // Em desenvolvimento local, caímos no fallback e lemos o arquivo diretamente da pasta do projeto.
-const serviceAccountPath = process.env.GOOGLE_APPLICATION_CREDENTIALS
-  ? path.resolve(process.env.GOOGLE_APPLICATION_CREDENTIALS)
-  : path.join(__dirname, "../../serviceAccountKey.json");
-
-const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, "utf-8"));
+let serviceAccount;
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+  // Em produção: conteúdo do JSON passado direto como variável de ambiente
+  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+} else {
+  // Em desenvolvimento local: lê o arquivo serviceAccountKey.json
+  const serviceAccountPath = process.env.GOOGLE_APPLICATION_CREDENTIALS
+    ? path.resolve(process.env.GOOGLE_APPLICATION_CREDENTIALS)
+    : path.join(__dirname, "../../serviceAccountKey.json");
+  serviceAccount = JSON.parse(readFileSync(serviceAccountPath, "utf-8"));
+}
 
 // Essa verificação evita que o Firebase seja inicializado mais de uma vez.
 // Em ambientes com hot-reload (como o Next.js em modo dev), esse módulo pode ser
