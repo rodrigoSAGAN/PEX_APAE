@@ -11,7 +11,7 @@ import { NextResponse } from "next/server";
 
 // URL base do backend — usa variável de ambiente ou fallback local
 const BACKEND_BASE_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
+  process.env.BACKEND_URL || "http://localhost:4000";
 
 // Handler POST — recebe os dados do pedido e repassa ao backend
 export async function POST(request) {

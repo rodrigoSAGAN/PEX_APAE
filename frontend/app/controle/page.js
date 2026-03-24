@@ -29,9 +29,7 @@ export default function ControlePage() {
   const [claims, setClaims] = useState(null); 
 
  
-  const API_BASE =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000";
-  const API = `${API_BASE}/api/users`;
+  const API = `/api/users`;
 
   console.log("[controle] componente montado");
 

@@ -12,7 +12,7 @@ import { NextResponse } from "next/server";
 
 // URL base do backend — usa variável de ambiente ou fallback local
 const BACKEND_BASE_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
+  process.env.BACKEND_URL || "http://localhost:4000";
 
 // Handler POST — recebe os dados do pagamento e solicita a criação do PIX ao backend
 export async function POST(request) {
@@ -21,7 +21,7 @@ export async function POST(request) {
     const body = await request.json();
 
     // Repassa a requisição pro endpoint de PIX do backend
-    const res = await fetch(`${BACKEND_BASE_URL}/pix`, {
+    const res = await fetch(`${BACKEND_BASE_URL}/api/pix`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

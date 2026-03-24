@@ -574,7 +574,7 @@ export default function EventsPage() {
                        alt="Preview"
                        className="w-full h-full object-cover"
                        onError={(e) => {
-                         e.target.src = "http://localhost:5000/uploads/products/imgerro.png";
+                         e.target.src = "/images/imagem-erro.jpeg";
                        }}
                      />
                    </div>
@@ -642,7 +642,7 @@ export default function EventsPage() {
                        alt={ev.title || "Evento"}
                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                        onError={(e) => {
-                         e.target.src = "http://localhost:5000/uploads/products/imgerro.png";
+                         e.target.src = "/images/imagem-erro.jpeg";
                        }}
                      />
                    </div>
@@ -767,7 +767,7 @@ export default function EventsPage() {
                  alt={selectedEvent.title}
                  className="w-full h-full object-cover"
                  onError={(e) => {
-                   e.target.src = "http://localhost:5000/uploads/products/imgerro.png";
+                   e.target.src = "/images/imagem-erro.jpeg";
                  }}
                />
                <button

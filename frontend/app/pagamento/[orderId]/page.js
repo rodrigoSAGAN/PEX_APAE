@@ -27,7 +27,7 @@ export default function PagamentoPage({ params }) {
 
         const checkStatus = async () => {
             try {
-                const res = await fetch(`http://localhost:4000/api/payments/status/${orderId}`);
+                const res = await fetch(`/api/payments/status/${orderId}`);
                 const data = await res.json();
 
                 if (data.status) {

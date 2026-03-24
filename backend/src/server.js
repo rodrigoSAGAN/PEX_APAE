@@ -23,6 +23,7 @@ import cartRouter from "./routes/cart.js";
 import salesRouter from "./routes/salesRoutes.js";
 import webhookRouter from "./routes/webhook.js";
 import paymentsRouter from "./routes/payments.js";
+import uploadRouter from "./routes/upload.js";
 
 // No ESM (módulos modernos do JS), __dirname e __filename não existem por padrão.
 // Precisamos recriá-los manualmente pra trabalhar com caminhos de arquivo.
@@ -40,8 +41,20 @@ console.log(
 
 const app = express();
 
-// Libera o CORS pra que o frontend consiga fazer requisições sem ser bloqueado.
-app.use(cors());
+// Libera o CORS apenas para origens conhecidas.
+const allowedOrigins = [
+  "https://pex-apae.vercel.app",
+  "http://localhost:3000",
+];
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS: origem não permitida"));
+    }
+  },
+}));
 
 // IMPORTANTE: O webhook fica ANTES do express.json() porque ele precisa do body
 // "cru" (raw) pra validar a assinatura de segurança do Mercado Pago.
@@ -65,6 +78,7 @@ app.use("/api/pix", pixRouter);             // Geração de pagamentos PIX
 app.use("/api/cart", cartRouter);           // Carrinho de compras
 app.use("/api/sales", salesRouter);         // Relatórios de vendas
 app.use("/api/payments", paymentsRouter);   // Status de pagamento
+app.use("/api/upload", uploadRouter);       // Upload de imagens para Firebase Storage
 
 const PORT = process.env.PORT || 4000;
 

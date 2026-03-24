@@ -192,7 +192,7 @@ export default function CartPage() {
                 name: `${event.title} - ${isChild ? "Criança" : "Adulto"}`,
                 price,
                 category: "Evento",
-                imageUrl: event.coverImage || "http://localhost:5000/uploads/products/imgerro.png",
+                imageUrl: event.coverImage || "/images/imagem-erro.jpeg",
                 eventId: event.id,
                 eventTitle: event.title,
                 eventDate: event.date,
