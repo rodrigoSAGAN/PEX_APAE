@@ -6,11 +6,10 @@
 // =============================================================================
 
 import { Router } from "express";
-import { db } from "../db/firestore.js";
+import { db, bucket } from "../db/firestore.js";
 import admin from "firebase-admin";
 import multer from "multer";
 import path from "path";
-import fs from "fs";
 
 const router = Router();
 
@@ -45,42 +44,25 @@ async function writeAuditLog({
   }
 }
  
-// URL base pra montar os links das imagens de produto.
-// Em produção, vem da variável de ambiente; em dev, usa localhost.
-const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || "http://localhost:4000";
+// Multer em memória — o arquivo fica no buffer e é enviado ao Firebase Storage.
+const upload = multer({ storage: multer.memoryStorage() });
 
-// Garante que a pasta de uploads de produtos existe antes de tentar salvar algo.
-const rootDir = process.cwd();
-const uploadsDir = path.join(rootDir, "uploads");
-const productsDir = path.join(uploadsDir, "products");
+// Faz upload do buffer para o Firebase Storage e retorna a URL pública.
+async function uploadToFirebase(file) {
+  const ext = path.extname(file.originalname) || "";
+  const base = path
+    .basename(file.originalname, ext)
+    .replace(/\s+/g, "-")
+    .toLowerCase();
+  const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
+  const filename = `products/${base}-${unique}${ext}`;
 
-try {
-  if (!fs.existsSync(productsDir)) {
-    fs.mkdirSync(productsDir, { recursive: true });
-  }
-} catch (_) {
-  // No Vercel o sistema de arquivos é somente leitura — uploads locais não funcionam.
-  // Imagens de produtos precisarão ser migradas para Firebase Storage futuramente.
+  const fileRef = bucket.file(filename);
+  await fileRef.save(file.buffer, { contentType: file.mimetype });
+  await fileRef.makePublic();
+
+  return `https://storage.googleapis.com/${bucket.name}/${filename}`;
 }
-
-// Configuração do Multer pra salvar as imagens com nomes únicos,
-// evitando conflitos quando dois produtos têm o mesmo nome de arquivo.
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, productsDir);
-  },
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname) || "";
-    const base = path
-      .basename(file.originalname, ext)
-      .replace(/\s+/g, "-")
-      .toLowerCase();
-    const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, `${base}-${unique}${ext}`);
-  },
-});
-
-const upload = multer({ storage });
 
 // Middleware que verifica se o usuário pode editar a loja.
 // Admin tem acesso total; colaborador precisa ter canEditStore = true.
@@ -192,8 +174,7 @@ router.post("/", requireAdmin, upload.single("image"), async (req, res) => {
 
     let finalImageUrl = bodyImageUrl || "";
     if (req.file) {
-      const relativePath = `/uploads/products/${req.file.filename}`;
-      finalImageUrl = `${PUBLIC_BASE_URL}${relativePath}`;
+      finalImageUrl = await uploadToFirebase(req.file);
     }
 
     const activeBool =
@@ -261,8 +242,7 @@ router.put("/:id", requireAdmin, upload.single("image"), async (req, res) => {
     }
 
     if (req.file) {
-      const relativePath = `/uploads/products/${req.file.filename}`;
-      up.imageUrl = `${PUBLIC_BASE_URL}${relativePath}`;
+      up.imageUrl = await uploadToFirebase(req.file);
     }
 
 

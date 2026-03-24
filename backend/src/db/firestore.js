@@ -30,10 +30,14 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT) {
 // Essa verificação evita que o Firebase seja inicializado mais de uma vez.
 // Em ambientes com hot-reload (como o Next.js em modo dev), esse módulo pode ser
 // recarregado várias vezes — sem essa guarda, causaria um erro de "app já existe".
+const storageBucket =
+  process.env.FIREBASE_STORAGE_BUCKET || `${serviceAccount.project_id}.appspot.com`;
+
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
     projectId: serviceAccount.project_id,
+    storageBucket,
   });
 }
 
@@ -41,6 +45,7 @@ if (!admin.apps.length) {
 // para ler e escrever dados. Exportamos tanto o 'admin' (para operações de auth)
 // quanto o 'db' (para operações no banco de dados).
 const db = admin.firestore();
+const bucket = admin.storage().bucket();
 
-export { admin, db };
+export { admin, db, bucket };
 export default admin;
