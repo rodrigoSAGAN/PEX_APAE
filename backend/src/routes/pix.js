@@ -116,10 +116,15 @@ router.post("/", async (req, res) => {
       });
     }
 
+    // Extrai detalhes do erro do SDK do Mercado Pago
+    const mpCause = e?.cause || e?.response?.data?.cause || null;
+    const mpMessage = e?.message || e?.response?.data?.message || "Erro ao criar pagamento PIX";
+
     return res.status(status).json({
       error: "pix_error",
-      message: e?.message || "Erro ao criar pagamento PIX",
-      cause: e?.cause || null,
+      message: mpMessage,
+      cause: mpCause,
+      status_code: status,
     });
   }
 });

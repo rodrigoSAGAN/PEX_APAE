@@ -412,20 +412,21 @@ export default function CartPage() {
         });
 
         if (!pixRes.ok) {
-          let bodyText = "";
+          let errData = null;
           try {
-            bodyText = await pixRes.text();
+            errData = await pixRes.json();
           } catch {
-            bodyText = "<sem corpo>";
+            // sem corpo JSON
           }
           console.error(
             "Erro ao criar PIX:",
             pixRes.status,
             pixRes.statusText,
-            bodyText
+            errData
           );
+          const errMsg = errData?.message || "Tente novamente em instantes.";
           alert(
-            "Pedido registrado, mas houve um erro ao gerar o PIX. Tente novamente em instantes."
+            `Pedido registrado, mas houve um erro ao gerar o PIX: ${errMsg}`
           );
           return;
         }
