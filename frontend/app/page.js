@@ -27,9 +27,9 @@ const SLIDES_HORTA = [
 ];
  
 const EVENTS = [
- { date: "25/11/2025", title: "Bazar de Natal Solidário", desc: "Venda de artigos e produtos da loja APAE – Pinhão.", tag: "Comunidade", image: "/images/events/bazar-natal.jpg" },
- { date: "03/12/2025", title: "Dia Internacional da Pessoa com Deficiência", desc: "Oficinas, apresentações e ações de conscientização.", tag: "Conscientização", image: "/images/events/dia-deficiencia.jpg" },
- { date: "15/12/2025", title: "Feira de Produtos da APAE – Pinhão", desc: "Exposição dos itens cadastrados no Portal APAE.", tag: "Loja APAE", image: "/images/events/feira-produtos.jpg" },
+ { date: "25/11/2025", title: "Bazar de Natal Solidário", desc: "Venda de artigos e produtos da loja APAE – Pinhão.", tag: "Comunidade", image: "/images/patio1.JPG" },
+ { date: "03/12/2025", title: "Dia Internacional da Pessoa com Deficiência", desc: "Oficinas, apresentações e ações de conscientização.", tag: "Conscientização", image: "/images/patio2.JPG" },
+ { date: "15/12/2025", title: "Feira de Produtos da APAE – Pinhão", desc: "Exposição dos itens cadastrados no Portal APAE.", tag: "Loja APAE", image: "/images/patio3.JPG" },
 ];
  
 export default function HomePage() {
@@ -38,12 +38,12 @@ export default function HomePage() {
  const [galleryFilter, setGalleryFilter] = useState("Todos");
  
  const galleryImages = [
-   { src: "/images/gallery/event1.jpg", category: "Eventos", label: "Festa Junina 2024" },
-   { src: "/images/gallery/pedagogico1.jpg", category: "Atividades Pedagógicas", label: "Aula de Artes" },
-   { src: "/images/gallery/momento1.jpg", category: "Momentos Especiais", label: "Visita ao Parque" },
-   { src: "/images/gallery/event2.jpg", category: "Eventos", label: "Dia das Crianças" },
-   { src: "/images/gallery/pedagogico2.jpg", category: "Atividades Pedagógicas", label: "Horta Comunitária" },
-   { src: "/images/gallery/momento2.jpg", category: "Momentos Especiais", label: "Apresentação de Natal" },
+   { src: "/images/galeria/1.jpg", category: "Eventos", label: "Festa Junina 2024" },
+   { src: "/images/horta1.JPG", category: "Atividades Pedagógicas", label: "Aula de Artes" },
+   { src: "/images/patio.JPG", category: "Momentos Especiais", label: "Visita ao Parque" },
+   { src: "/images/galeria/2.jpg", category: "Eventos", label: "Dia das Crianças" },
+   { src: "/images/horta2.JPG", category: "Atividades Pedagógicas", label: "Horta Comunitária" },
+   { src: "/images/galeria/3.jpg", category: "Momentos Especiais", label: "Apresentação de Natal" },
  ];
  
  const filteredImages = galleryFilter === "Todos"
