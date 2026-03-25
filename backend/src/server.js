@@ -32,12 +32,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = __dirname;
 
-// Carrega as variáveis de ambiente do .env (chaves do Mercado Pago, Firebase, etc.)
+// Carrega as variáveis de ambiente do .env (token do PagBank, Firebase, etc.)
 dotenv.config();
 
 console.log(
-  "MP_ACCESS_TOKEN carregado?",
-  process.env.MP_ACCESS_TOKEN ? "SIM" : "NÃO"
+  "PAGBANK_TOKEN carregado?",
+  process.env.PAGBANK_TOKEN ? "SIM" : "NÃO"
 );
 
 const app = express();
@@ -62,8 +62,8 @@ app.use(cors({
 // Compressão gzip/brotli para todas as respostas — reduz ~70-90% do tamanho do JSON
 app.use(compression());
 
-// IMPORTANTE: O webhook fica ANTES do express.json() porque ele precisa do body
-// "cru" (raw) pra validar a assinatura de segurança do Mercado Pago.
+// O webhook fica ANTES do express.json() — o próprio router aplica express.json()
+// internamente. O PagBank não exige body cru (sem HMAC), mas mantemos a ordem.
 app.use("/webhook", webhookRouter);
 
 // A partir daqui, todas as outras rotas usam JSON normalmente.

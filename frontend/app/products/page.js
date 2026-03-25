@@ -57,6 +57,7 @@ export default function ProductsPage() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [stream, setStream] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
   // Flag que indica se é seguro gravar no localStorage ainda — evita sobrescrever antes de carregar
   const [readyToPersist, setReadyToPersist] = useState(false);
 
@@ -110,6 +111,15 @@ export default function ProductsPage() {
       }
     };
   }, [stream]);
+
+  // Atribui o stream ao elemento <video> assim que ele aparece no DOM.
+  // Sem isso a tela fica preta porque o srcObject é definido antes do elemento existir.
+  useEffect(() => {
+    if (showCamera && videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [showCamera, stream]);
 
   // Adiciona o produto ao carrinho e redireciona direto para o carrinho.
   // Antes de adicionar, verificamos duas coisas:
@@ -207,6 +217,19 @@ export default function ProductsPage() {
   // A lógica de envio muda dependendo se existe uma imagem:
   // - Com imagem: usamos FormData (multipart) para enviar arquivo binário junto com os dados
   // - Sem imagem: usamos JSON puro, que é mais simples e leve
+  function handlePriceChange(raw) {
+    const digits = raw.replace(/\D/g, "");
+    if (!digits) return setForm((f) => ({ ...f, price: "" }));
+    const value = parseInt(digits, 10) / 100;
+    const formatted = value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    setForm((f) => ({ ...f, price: formatted }));
+  }
+
+  function parseBRL(str) {
+    if (!str) return 0;
+    return parseFloat(str.replace(/[R$\s.]/g, "").replace(",", ".")) || 0;
+  }
+
   async function handleSave(e) {
     e.preventDefault();
 
@@ -228,7 +251,7 @@ export default function ProductsPage() {
       if (imageFile) {
         const formData = new FormData();
         formData.append("name", form.name);
-        formData.append("price", String(Number(form.price)));
+        formData.append("price", String(parseBRL(form.price)));
         formData.append("stock", String(Number(form.stock)));
         formData.append("category", form.category || "");
         formData.append("image", imageFile);
@@ -243,7 +266,7 @@ export default function ProductsPage() {
       } else {
         const body = {
           name: form.name,
-          price: Number(form.price),
+          price: parseBRL(form.price),
           stock: Number(form.stock),
           category: form.category || null,
         };
@@ -272,7 +295,9 @@ export default function ProductsPage() {
       setEditing(null);
       setImageFile(null);
       setImagePreview("");
+      setShowEditModal(false);
       await load();
+      router.refresh();
     } catch (e) {
       console.error("[products] erro ao salvar produto:", e);
       showModal("Erro inesperado ao salvar produto.", "Erro");
@@ -420,9 +445,6 @@ export default function ProductsPage() {
       }
 
       setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
       setShowCamera(true);
     } catch (err) {
       console.error("Erro ao acessar câmera:", err);
@@ -551,7 +573,7 @@ export default function ProductsPage() {
               )}
             </div>
 
-            {canEdit && (
+            {canEdit && !editing && (
               <form
                 onSubmit={handleSave}
                 className="mb-10 bg-slate-50 rounded-2xl p-6 border border-slate-200 shadow-sm"
@@ -565,15 +587,13 @@ export default function ProductsPage() {
                     className="flex-1 min-w-[200px] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
                   />
                   <input
-                    placeholder="Preço"
-                    type="number"
-                    step="0.01"
+                    placeholder="R$ 0,00"
+                    type="text"
+                    inputMode="numeric"
                     value={form.price}
-                    onChange={(e) =>
-                      setForm({ ...form, price: e.target.value })
-                    }
+                    onChange={(e) => handlePriceChange(e.target.value)}
                     required
-                    className="w-32 px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                    className="w-36 px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
                   />
                   <input
                     placeholder="Estoque"
@@ -585,14 +605,17 @@ export default function ProductsPage() {
                     required
                     className="w-32 px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
                   />
-                  <input
-                    placeholder="Categoria (artigos, cozinha...)"
+                  <select
                     value={form.category}
-                    onChange={(e) =>
-                      setForm({ ...form, category: e.target.value })
-                    }
-                    className="flex-1 min-w-[200px] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
-                  />
+                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                    required
+                    className="flex-1 min-w-[200px] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all bg-white"
+                  >
+                    <option value="">Selecione uma categoria</option>
+                    <option value="artigos">Artigos</option>
+                    <option value="cozinha">Cozinha</option>
+                    <option value="geral">Geral</option>
+                  </select>
 
                   <div className="relative group w-full flex flex-col gap-2">
                     <div className="flex gap-2 items-end">
@@ -601,6 +624,7 @@ export default function ProductsPage() {
                           Imagem do Produto
                         </label>
                         <input
+                          id="edit-product-image"
                           type="file"
                           accept="image/*"
                           onChange={async (e) => {
@@ -614,13 +638,14 @@ export default function ProductsPage() {
                               setImagePreview("");
                             }
                           }}
-                          className="block w-full text-xs text-slate-500
-                            file:mr-4 file:py-2 file:px-4
-                            file:rounded-full file:border-0
-                            file:text-xs file:font-semibold
-                            file:bg-emerald-50 file:text-emerald-700
-                            hover:file:bg-emerald-100 cursor-pointer"
+                          className="hidden"
                         />
+                        <label
+                          htmlFor="edit-product-image"
+                          className="flex items-center justify-center gap-2 w-full px-4 py-2 rounded-full border border-dashed border-slate-300 bg-slate-50 text-slate-600 text-xs font-semibold hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700 transition-colors cursor-pointer select-none"
+                        >
+                          🖼️ Selecionar imagem
+                        </label>
                       </div>
                       <button
                         type="button"
@@ -666,29 +691,8 @@ export default function ProductsPage() {
                     type="submit"
                     className="px-6 py-2.5 rounded-full bg-emerald-600 text-white text-sm font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 hover:shadow-emerald-500/30 hover:-translate-y-0.5 transition-all duration-300"
                   >
-                    {editing ? "Salvar Alterações" : "Adicionar Produto"}
+                    Adicionar Produto
                   </button>
-
-                  {editing && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditing(null);
-                        setForm({
-                          name: "",
-                          price: "",
-                          stock: "",
-                          category: "",
-                        });
-                        setImageFile(null);
-                        setImagePreview("");
-                        stopCamera();
-                      }}
-                      className="px-6 py-2.5 rounded-full bg-slate-400 text-white text-sm font-bold hover:bg-slate-500 transition-all duration-300"
-                    >
-                      Cancelar
-                    </button>
-                  )}
                 </div>
 
                 {imagePreview && (
@@ -936,16 +940,15 @@ export default function ProductsPage() {
                                   setEditing(p);
                                   setForm({
                                     name: p.name || "",
-                                    price: p.price || "",
+                                    price: p.price
+                                      ? Number(p.price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+                                      : "",
                                     stock: p.stock || "",
                                     category: p.category || "",
                                   });
                                   setImageFile(null);
                                   setImagePreview(p.imageUrl || "");
-                                  window.scrollTo({
-                                    top: 0,
-                                    behavior: "smooth",
-                                  });
+                                  setShowEditModal(true);
                                 }}
                                 className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 text-xs font-bold hover:bg-blue-100 transition-colors"
                               >
@@ -968,6 +971,156 @@ export default function ProductsPage() {
               </div>
             )}
           </div>
+          {showEditModal && editing && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  setShowEditModal(false);
+                  setEditing(null);
+                  setImageFile(null);
+                  setImagePreview("");
+                  stopCamera();
+                }
+              }}
+            >
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditing(null);
+                    setImageFile(null);
+                    setImagePreview("");
+                    stopCamera();
+                  }}
+                  className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-lg transition-colors"
+                >
+                  ×
+                </button>
+                <h3 className="text-xl font-bold text-slate-900 mb-6">Editar Produto</h3>
+                <form onSubmit={handleSave} className="flex flex-col gap-4">
+                  <input
+                    placeholder="Nome"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    required
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                  />
+                  <div className="flex gap-3">
+                    <input
+                      placeholder="R$ 0,00"
+                      type="text"
+                      inputMode="numeric"
+                      value={form.price}
+                      onChange={(e) => handlePriceChange(e.target.value)}
+                      required
+                      className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                    />
+                    <input
+                      placeholder="Estoque"
+                      type="number"
+                      value={form.stock}
+                      onChange={(e) => setForm({ ...form, stock: e.target.value })}
+                      required
+                      className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                    />
+                  </div>
+                  <select
+                    value={form.category}
+                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                    required
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all bg-white"
+                  >
+                    <option value="">Selecione uma categoria</option>
+                    <option value="artigos">Artigos</option>
+                    <option value="cozinha">Cozinha</option>
+                    <option value="geral">Geral</option>
+                  </select>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-semibold text-slate-500 ml-1">Imagem do Produto</label>
+                    <div className="flex gap-2">
+                      <input
+                        id="add-product-image"
+                        type="file"
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const compressed = await compressImage(file);
+                            setImageFile(compressed);
+                            setImagePreview(URL.createObjectURL(compressed));
+                          } else {
+                            setImageFile(null);
+                            setImagePreview("");
+                          }
+                        }}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="add-product-image"
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-full border border-dashed border-slate-300 bg-slate-50 text-slate-600 text-xs font-semibold hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700 transition-colors cursor-pointer select-none"
+                      >
+                        🖼️ Selecionar imagem
+                      </label>
+                      <button
+                        type="button"
+                        onClick={startCamera}
+                        className="px-3 py-2 rounded-full bg-blue-50 text-blue-600 text-xs font-bold hover:bg-blue-100 transition-colors flex items-center gap-1"
+                      >
+                        📷 Foto
+                      </button>
+                    </div>
+                    {showCamera && (
+                      <div className="mt-2 p-3 bg-slate-100 rounded-xl border border-slate-200 flex flex-col items-center gap-3">
+                        <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden">
+                          <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                        </div>
+                        <canvas ref={canvasRef} className="hidden" />
+                        <div className="flex gap-2">
+                          <button type="button" onClick={capturePhoto} className="px-5 py-2 rounded-full bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-all">Capturar</button>
+                          <button type="button" onClick={stopCamera} className="px-5 py-2 rounded-full bg-slate-400 text-white text-sm font-bold hover:bg-slate-500 transition-all">Cancelar</button>
+                        </div>
+                      </div>
+                    )}
+                    {imagePreview && (
+                      <div className="mt-2 flex items-center gap-3">
+                        <img
+                          src={imagePreview}
+                          alt="Pré-visualização"
+                          className="w-20 h-20 object-cover rounded-xl border border-slate-200 shadow-sm"
+                          onError={(e) => { e.currentTarget.src = "/images/imagem-erro.webp"; e.currentTarget.onerror = null; }}
+                        />
+                        <span className="text-xs text-slate-500">Imagem selecionada</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-3 mt-2">
+                    <button
+                      type="submit"
+                      className="flex-1 py-2.5 rounded-full bg-emerald-600 text-white text-sm font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 transition-all"
+                    >
+                      Salvar Alterações
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowEditModal(false);
+                        setEditing(null);
+                        setImageFile(null);
+                        setImagePreview("");
+                        stopCamera();
+                      }}
+                      className="flex-1 py-2.5 rounded-full bg-slate-200 text-slate-700 text-sm font-bold hover:bg-slate-300 transition-all"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
           {Object.values(cart).reduce((acc, n) => acc + n, 0) > 0 && !claims && (
             <Link
               href="/carrinho"

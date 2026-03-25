@@ -1,11 +1,5 @@
 // =============================================================================
 // galeria/page.js — Galeria de fotos da APAE
-//
-// Exibe as fotos cadastradas na coleção "gallery" do Firestore em tempo real
-// (onSnapshot). Suporta filtro por categoria e modal de zoom ao clicar.
-// Admins/colaboradores com canEditEvents podem enviar novas fotos usando
-// upload de arquivo ou captura pela câmera do dispositivo. As imagens são
-// armazenadas no Firebase Storage (pasta gallery/) e a URL salva no Firestore.
 // =============================================================================
 
 "use client";
@@ -25,31 +19,45 @@ import {
 } from "firebase/firestore";
 import { compressImage } from "../../lib/compressImage";
 
+const CATEGORY_OPTIONS = [
+  "Eventos",
+  "Estrutura",
+  "Horta",
+  "Atividades pedagógicas",
+  "Confraternizações",
+  "Outros",
+];
+
 export default function GaleriaPage() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [success, setSuccess] = useState("");
 
   const [user, setUser] = useState(null);
   const [claims, setClaims] = useState(null);
   const [authReady, setAuthReady] = useState(false);
 
   const [filterCategory, setFilterCategory] = useState("todos");
-
   const [zoomItem, setZoomItem] = useState(null);
 
-  const [form, setForm] = useState({
-    title: "",
-    description: "",
-    category: "Eventos",
-  });
-
+  const [form, setForm] = useState({ title: "", description: "", category: "Eventos" });
   const [file, setFile] = useState(null);
+  const [filePreview, setFilePreview] = useState(null);
+  const [fileInputKey, setFileInputKey] = useState(0);
   const [uploading, setUploading] = useState(false);
 
   const [showCamera, setShowCamera] = useState(false);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -69,31 +77,27 @@ export default function GaleriaPage() {
   const isAdmin = roles.includes("admin");
   const isColab = roles.includes("colaborador");
   const canEvents = claims?.canEditEvents === true;
-  // Quem pode enviar fotos: admin, ou colaborador com permissão de eventos
   const canEditGallery = isAdmin || (isColab && canEvents);
+  const showSidebar = !isMobile && !!claims;
 
   useEffect(() => {
     try {
       const colRef = collection(db, "gallery");
       const q = query(colRef, orderBy("createdAt", "desc"));
-
       const unsub = onSnapshot(
         q,
         (snap) => {
-          const list = snap.docs.map((doc) => {
-            const data = doc.data();
+          setItems(snap.docs.map((doc) => {
+            const d = doc.data();
             return {
               id: doc.id,
-              title: data.title || "",
-              description: data.description || "",
-              category: data.category || "Outros",
-              imageUrl: data.imageUrl || "",
-              createdAt: data.createdAt?.toDate
-                ? data.createdAt.toDate()
-                : null,
+              title: d.title || "",
+              description: d.description || "",
+              category: d.category || "Outros",
+              imageUrl: d.imageUrl || "",
+              createdAt: d.createdAt?.toDate ? d.createdAt.toDate() : null,
             };
-          });
-          setItems(list);
+          }));
           setLoading(false);
         },
         () => {
@@ -101,28 +105,16 @@ export default function GaleriaPage() {
           setLoading(false);
         }
       );
-
       return () => unsub();
-    } catch (e) {
+    } catch {
       setErr("Falha ao conectar à galeria.");
       setLoading(false);
     }
   }, []);
 
-  const CATEGORY_OPTIONS = [
-    "Eventos",
-    "Estrutura",
-    "Horta",
-    "Atividades pedagógicas",
-    "Confraternizações",
-    "Outros",
-  ];
-
   const categoriesFromData = useMemo(() => {
     const set = new Set();
-    items.forEach((it) => {
-      if (it.category) set.add(it.category);
-    });
+    items.forEach((it) => { if (it.category) set.add(it.category); });
     return Array.from(set);
   }, [items]);
 
@@ -131,116 +123,60 @@ export default function GaleriaPage() {
     return items.filter((it) => it.category === filterCategory);
   }, [items, filterCategory]);
 
+  // Camera — inicia quando showCamera muda para true
   useEffect(() => {
     if (!showCamera) return;
+    let localStream = null;
 
-    const startCamera = async () => {
+    const start = async () => {
       try {
         const video = videoRef.current;
         if (!video) return;
-
-        let stream;
         try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: "environment" } },
-          });
-        } catch (e) {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-          });
+          localStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } } });
+        } catch {
+          localStream = await navigator.mediaDevices.getUserMedia({ video: true });
         }
-
-        video.srcObject = stream;
-
-        await new Promise((resolve) => {
-          video.onloadedmetadata = () => {
-            video.play().then(resolve);
-          };
-        });
-
-        await new Promise((r) => setTimeout(r, 200));
-
-        if (video.videoWidth === 0 || video.videoHeight === 0) {
-          alert("A câmera não iniciou corretamente. Tente novamente.");
-          stopStream();
-          setShowCamera(false);
-        }
+        video.srcObject = localStream;
+        await new Promise((res) => { video.onloadedmetadata = () => video.play().then(res); });
       } catch {
-        alert("Não foi possível acessar a câmera.");
+        setErr("Não foi possível acessar a câmera.");
         setShowCamera(false);
       }
     };
 
-    startCamera();
+    start();
+    return () => {
+      if (localStream) localStream.getTracks().forEach((t) => t.stop());
+    };
   }, [showCamera]);
 
-  const stopStream = () => {
-    const video = videoRef.current;
-    if (video && video.srcObject) {
-      video.srcObject.getTracks().forEach((t) => t.stop());
-    }
-  };
-
-  // Captura o frame atual do vídeo e converte para arquivo JPEG (qualidade 70%)
   const capturePhoto = () => {
     const video = videoRef.current;
     const canvas = document.createElement("canvas");
-
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) {
-          alert("Falha ao processar imagem.");
-          return;
-        }
-
-        const photoFile = new File([blob], "foto.jpg", {
-          type: "image/jpeg",
-        });
-
-        setFile(photoFile);
-        stopStream();
-        setShowCamera(false);
-      },
-      "image/jpeg",
-      0.7
-    );
+    canvas.getContext("2d").drawImage(video, 0, 0);
+    canvas.toBlob((blob) => {
+      if (!blob) { setErr("Falha ao capturar imagem."); return; }
+      const photoFile = new File([blob], "foto.jpg", { type: "image/jpeg" });
+      setFile(photoFile);
+      setFilePreview(URL.createObjectURL(photoFile));
+      setShowCamera(false);
+    }, "image/jpeg", 0.7);
   };
 
-  const handleCloseCamera = () => {
-    stopStream();
-    setShowCamera(false);
-  };
-  // Faz o upload da foto para o Firebase Storage e salva os metadados no Firestore.
-  // O nome do arquivo no Storage inclui timestamp pra evitar colisões.
   async function handleUpload(e) {
     e.preventDefault();
     setErr("");
+    setSuccess("");
 
-    if (!canEditGallery) {
-      setErr("Você não tem permissão para enviar fotos.");
-      return;
-    }
-
-    if (!file) {
-      setErr("Selecione ou capture uma imagem.");
-      return;
-    }
-
-    if (!form.title.trim()) {
-      setErr("Informe um título.");
-      return;
-    }
+    if (!file) { setErr("Selecione ou capture uma imagem."); return; }
+    if (!form.title.trim()) { setErr("Informe um título para a foto."); return; }
 
     try {
       setUploading(true);
       const compressed = await compressImage(file);
-
       const token = user ? await user.getIdToken() : null;
       const formData = new FormData();
       formData.append("image", compressed);
@@ -254,8 +190,7 @@ export default function GaleriaPage() {
       if (!uploadRes.ok) throw new Error("Falha no upload da imagem.");
       const { imageUrl } = await uploadRes.json();
 
-      const colRef = collection(db, "gallery");
-      await addDoc(colRef, {
+      await addDoc(collection(db, "gallery"), {
         title: form.title.trim(),
         description: form.description.trim(),
         category: form.category || "Outros",
@@ -263,555 +198,285 @@ export default function GaleriaPage() {
         createdAt: serverTimestamp(),
       });
 
-      setForm({
-        title: "",
-        description: "",
-        category: form.category,
-      });
+      setForm({ title: "", description: "", category: form.category });
       setFile(null);
-      e.target.reset && e.target.reset();
+      setFilePreview(null);
+      setFileInputKey((k) => k + 1);
+      setSuccess("Foto adicionada com sucesso!");
+      setTimeout(() => setSuccess(""), 4000);
     } catch {
-      setErr("Erro ao enviar imagem.");
+      setErr("Erro ao enviar imagem. Tente novamente.");
     } finally {
       setUploading(false);
     }
   }
 
-  const page = {
-    minHeight: "calc(100svh - 56px)",
-    padding: "16px 16px 80px 16px",
-    display: "grid",
-    gridTemplateColumns: "260px 1fr",
-    gap: 16,
-    maxWidth: 1120,
-    margin: "0 auto",
-    background: "#e6f3ff",
-  };
-
-  const panelBase = {
-    border: "1px solid #e5e7eb",
-    borderRadius: 12,
-    padding: 12,
-    background: "#ffffff",
-    minHeight: 0,
-    display: "grid",
-    gridTemplateRows: "auto 1fr",
-    gap: 8,
-  };
-
-  const mainPanel = {
-    ...panelBase,
-    overflow: "hidden",
-  };
-
-  const title = {
-    fontSize: 22,
-    fontWeight: 700,
-    color: "#0f172a",
-    marginBottom: 6,
-  };
-
-  const subtitle = {
-    fontSize: 14,
-    color: "#475569",
-    marginBottom: 16,
-  };
-
-  const errorBox = {
-    background: "#fef2f2",
-    borderRadius: 8,
-    border: "1px solid #fecaca",
-    color: "#991b1b",
-    padding: 10,
-    fontSize: 13,
-    marginBottom: 12,
-  };
-
-  const uploadSection = {
-    background: "#f8fafc",
-    borderRadius: 12,
-    border: "1px solid #e2e8f0",
-    padding: 16,
-    marginBottom: 24,
-  };
-
-  const sectionTitle = {
-    fontSize: 16,
-    fontWeight: 600,
-    color: "#0f172a",
-    marginBottom: 12,
-  };
-
-  const fieldRow = {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 12,
-    marginBottom: 12,
-  };
-
-  const label = {
-    display: "block",
-    fontSize: 13,
-    color: "#334155",
-    marginBottom: 4,
-    fontWeight: 600,
-  };
-
-  const input = {
-    width: "100%",
-    borderRadius: 8,
-    border: "1px solid #cbd5e1",
-    padding: "8px 12px",
-    fontSize: 14,
-    outline: "none",
-    background: "#ffffff",
-  };
-
-  const textarea = {
-    ...input,
-    minHeight: 80,
-    resize: "vertical",
-  };
-
-  const select = {
-    ...input,
-  };
-
-  const fileInput = {
-    width: "100%",
-    fontSize: 13,
-    marginTop: 4,
-  };
-
-  const uploadBtn = {
-    marginTop: 12,
-    padding: "10px 20px",
-    borderRadius: 999,
-    border: "none",
-    cursor: uploading ? "not-allowed" : "pointer",
-    fontWeight: 600,
-    fontSize: 14,
-    background: "#16a34a",
-    color: "#ffffff",
-    opacity: uploading ? 0.7 : 1,
-  };
-
-  const cameraBtn = {
-    marginTop: 12,
-    marginLeft: 12,
-    padding: "10px 20px",
-    borderRadius: 999,
-    border: "none",
-    cursor: "pointer",
-    fontWeight: 600,
-    fontSize: 14,
-    background: "#2563eb",
-    color: "#ffffff",
-  };
-
-  const galleryHeader = {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
-    gap: 12,
-    marginBottom: 16,
-  };
-
-  const filterSelect = {
-    borderRadius: 999,
-    border: "1px solid #cbd5e1",
-    padding: "6px 16px",
-    fontSize: 13,
-    background: "#ffffff",
-    cursor: "pointer",
-  };
-
-  const grid = {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-    gap: 16,
-  };
-
-  const card = {
-    background: "#ffffff",
-    borderRadius: 12,
-    overflow: "hidden",
-    border: "1px solid #e5e7eb",
-    boxShadow: "0 4px 6px rgba(15,23,42,0.05)",
-    cursor: "pointer",
-    display: "flex",
-    flexDirection: "column",
-    transition: "transform 0.2s",
-  };
-
-  const imgBox = {
-    width: "100%",
-    height: 160,
-    objectFit: "cover",
-    display: "block",
-    background: "#f1f5f9",
-  };
-
-  const cardBody = {
-    padding: 12,
-  };
-
-  const cardTitleStyle = {
-    fontSize: 14,
-    fontWeight: 600,
-    color: "#0f172a",
-    marginBottom: 4,
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-  };
-
-  const cardCat = {
-    fontSize: 11,
-    color: "#0f766e",
-    textTransform: "uppercase",
-    fontWeight: 600,
-  };
-
-  const empty = {
-    textAlign: "center",
-    padding: 24,
-    color: "#64748b",
-    fontSize: 14,
-    background: "#f8fafc",
-    borderRadius: 12,
-    border: "1px dashed #cbd5e1",
-  };
-
-  const modalBackdrop = {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(15,23,42,0.8)",
-    display: "grid",
-    placeItems: "center",
-    zIndex: 9999,
-    padding: 16,
-  };
-
-  const modalBox = {
-    background: "#ffffff",
-    borderRadius: 16,
-    maxWidth: 900,
-    width: "100%",
-    maxHeight: "90vh",
-    overflow: "hidden",
-    boxShadow:
-      "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
-    display: "grid",
-    gridTemplateColumns: "minmax(0, 1.5fr) minmax(0, 1fr)",
-  };
-
-  const modalImgWrap = {
-    background: "#0f172a",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
-
-  const modalImg = {
-    width: "100%",
-    height: "100%",
-    maxHeight: "90vh",
-    objectFit: "contain",
-  };
-
-  const modalContent = {
-    padding: 24,
-    display: "flex",
-    flexDirection: "column",
-    gap: 12,
-    overflowY: "auto",
-  };
-
-  const modalClose = {
-    alignSelf: "flex-end",
-    border: "none",
-    background: "transparent",
-    fontSize: 24,
-    cursor: "pointer",
-    color: "#64748b",
-    lineHeight: 1,
-  };
-
-  const modalTitleStyle = {
-    fontSize: 20,
-    fontWeight: 700,
-    color: "#0f172a",
-  };
-
-  const modalDesc = {
-    fontSize: 14,
-    color: "#475569",
-    lineHeight: 1.6,
-  };
   return (
     <>
       <Nav />
-      <main style={page}>
-        <SideMenu claims={claims} />
+      <div className="min-h-screen bg-slate-50 pb-20">
+        <div className={`max-w-[1120px] mx-auto px-4 pt-6 ${showSidebar ? "md:grid md:grid-cols-[260px_1fr] md:gap-4" : ""}`}>
+          {showSidebar && <SideMenu claims={claims} />}
 
-        <section style={mainPanel}>
-          <div>
-            <h1 style={title}>Galeria de fotos</h1>
-            <p style={subtitle}>
-              Veja registros de eventos, atividades pedagógicas e momentos especiais da APAE – Pinhão.
-            </p>
+          <main className="flex flex-col gap-5 min-w-0">
+            {/* Header */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+              <h1 className="text-2xl font-bold text-slate-900 mb-1">Galeria de fotos</h1>
+              <p className="text-slate-500 text-sm">Registros de eventos, atividades e momentos especiais da APAE – Pinhão.</p>
+            </div>
 
-            {err && <div style={errorBox}>{err}</div>}
+            {/* Mensagens */}
+            {err && (
+              <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm font-medium flex items-center justify-between gap-3">
+                {err}
+                <button onClick={() => setErr("")} className="text-red-400 hover:text-red-600 font-bold text-lg leading-none">×</button>
+              </div>
+            )}
+            {success && (
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-4 py-3 text-sm font-medium flex items-center gap-2">
+                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                {success}
+              </div>
+            )}
 
+            {/* Upload form */}
             {authReady && canEditGallery && (
-              <div style={uploadSection}>
-                <h3 style={sectionTitle}>Adicionar nova foto</h3>
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                <h2 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs flex items-center justify-center font-bold">+</span>
+                  Adicionar nova foto
+                </h2>
 
-                <form onSubmit={handleUpload}>
-                  <div style={fieldRow}>
-                    <div>
-                      <label style={label}>Título da foto</label>
+                <form onSubmit={handleUpload} className="flex flex-col gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-slate-600">Título <span className="text-red-400">*</span></label>
                       <input
-                        style={input}
                         type="text"
                         value={form.title}
-                        onChange={(e) =>
-                          setForm((f) => ({ ...f, title: e.target.value }))
-                        }
-                        placeholder="Ex.: Festa Junina"
+                        onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                        placeholder="Ex.: Festa Junina 2025"
+                        className="px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
                       />
                     </div>
 
-                    <div>
-                      <label style={label}>Categoria</label>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-slate-600">Categoria</label>
                       <select
-                        style={select}
                         value={form.category}
-                        onChange={(e) =>
-                          setForm((f) => ({ ...f, category: e.target.value }))
-                        }
+                        onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                        className="px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all bg-white"
                       >
                         {CATEGORY_OPTIONS.map((cat) => (
-                          <option key={cat} value={cat}>
-                            {cat}
-                          </option>
+                          <option key={cat} value={cat}>{cat}</option>
                         ))}
                       </select>
                     </div>
                   </div>
 
-                  <div style={{ marginBottom: 12 }}>
-                    <label style={label}>Descrição (opcional)</label>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-semibold text-slate-600">Descrição <span className="text-slate-400 font-normal">(opcional)</span></label>
                     <textarea
-                      style={textarea}
                       value={form.description}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, description: e.target.value }))
-                      }
+                      onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                       placeholder="Detalhes sobre a foto..."
+                      rows={2}
+                      className="px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all resize-none"
                     />
                   </div>
 
-                  <div style={{ marginBottom: 12 }}>
-                    <label style={label}>Imagem</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      style={fileInput}
-                      onChange={(e) => setFile(e.target.files?.[0] || null)}
-                    />
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-semibold text-slate-600">Imagem <span className="text-red-400">*</span></label>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        key={fileInputKey}
+                        id="gallery-file-input"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0] || null;
+                          setFile(f);
+                          setFilePreview(f ? URL.createObjectURL(f) : null);
+                        }}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="gallery-file-input"
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-full border border-dashed border-slate-300 bg-slate-50 text-slate-600 text-xs font-semibold hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700 transition-colors cursor-pointer select-none"
+                      >
+                        🖼️ Selecionar imagem
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowCamera(true)}
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-blue-600 text-xs font-bold hover:bg-blue-100 transition-colors whitespace-nowrap cursor-pointer"
+                      >
+                        📷 Tirar foto
+                      </button>
+                    </div>
+
+                    {filePreview && (
+                      <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 mt-1">
+                        <img
+                          src={filePreview}
+                          alt="Pré-visualização"
+                          className="w-16 h-16 object-cover rounded-lg border border-slate-200 shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-slate-700 truncate">{file?.name}</p>
+                          <p className="text-xs text-slate-400 mt-0.5">{file ? (file.size / 1024).toFixed(0) + " KB" : ""}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { setFile(null); setFilePreview(null); setFileInputKey((k) => k + 1); }}
+                          className="w-7 h-7 rounded-full bg-slate-200 hover:bg-red-100 hover:text-red-600 flex items-center justify-center text-slate-500 text-sm font-bold transition-colors shrink-0"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    )}
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center" }}>
-                    <button type="submit" style={uploadBtn} disabled={uploading}>
-                      {uploading ? "Enviando..." : "Enviar foto"}
-                    </button>
-
-                    <button
-                      type="button"
-                      style={cameraBtn}
-                      onClick={() => setShowCamera(true)}
-                    >
-                      Tirar foto
-                    </button>
-                  </div>
+                  <button
+                    type="submit"
+                    disabled={uploading}
+                    className="w-full sm:w-auto self-start px-6 py-2.5 rounded-full bg-emerald-600 text-white text-sm font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {uploading ? (
+                      <>
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Enviando...
+                      </>
+                    ) : "Enviar foto"}
+                  </button>
                 </form>
               </div>
             )}
 
-            <div style={galleryHeader}>
-              <h2 style={{ ...sectionTitle, marginBottom: 0 }}>Fotos cadastradas</h2>
-
-              <div>
-                <label
-                  style={{ fontSize: 13, color: "#64748b", marginRight: 8 }}
-                >
-                  Filtrar:
-                </label>
+            {/* Galeria */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                <h2 className="text-base font-bold text-slate-800">
+                  Fotos cadastradas
+                  {!loading && <span className="ml-2 text-xs font-normal text-slate-400">({filteredItems.length})</span>}
+                </h2>
                 <select
-                  style={filterSelect}
                   value={filterCategory}
                   onChange={(e) => setFilterCategory(e.target.value)}
+                  className="px-4 py-2 rounded-full border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
                 >
-                  <option value="todos">Todas</option>
+                  <option value="todos">Todas as categorias</option>
                   {categoriesFromData.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
+                    <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
               </div>
-            </div>
 
-            {loading ? (
-              <div style={empty}>Carregando fotos...</div>
-            ) : filteredItems.length === 0 ? (
-              <div style={empty}>Nenhuma foto encontrada.</div>
-            ) : (
-              <div style={grid}>
-                {filteredItems.map((it) => (
-                  <article
-                    key={it.id}
-                    style={card}
-                    onClick={() => it.imageUrl && setZoomItem(it)}
-                  >
-                      <img
-                        src={it.imageUrl || "/images/imagem-erro.webp"}
-                        alt={it.title}
-                        style={imgBox}
-                        onError={(e) => {
-                          e.currentTarget.src = "/images/imagem-erro.webp";
-                          e.currentTarget.onerror = null;
-                        }}
-                      />
-
-                    <div style={cardBody}>
-                      <div style={cardTitleStyle} title={it.title}>
-                        {it.title || "Sem título"}
-                      </div>
-                      <div style={cardCat}>{it.category || "Geral"}</div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-
-        {zoomItem && (
-          <div style={modalBackdrop} onClick={() => setZoomItem(null)}>
-            <div style={modalBox} onClick={(e) => e.stopPropagation()}>
-              <div style={modalImgWrap}>
-                <img
-                  src={zoomItem.imageUrl}
-                  alt={zoomItem.title}
-                  style={modalImg}
-                  onError={(e) => {
-                    e.currentTarget.src = "/images/imagem-erro.webp";
-                    e.currentTarget.onerror = null;
-                  }}
-                />
-              </div>
-
-              <div style={modalContent}>
-                <button
-                  type="button"
-                  style={modalClose}
-                  onClick={() => setZoomItem(null)}
-                >
-                  ×
-                </button>
-
-                <div>
-                  <h3 style={modalTitleStyle}>{zoomItem.title}</h3>
-
-                  {zoomItem.category && (
-                    <span
-                      style={{
-                        fontSize: 12,
-                        textTransform: "uppercase",
-                        color: "#0f766e",
-                        fontWeight: 600,
-                        marginTop: 4,
-                        display: "block",
-                      }}
-                    >
-                      {zoomItem.category}
-                    </span>
-                  )}
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-16 gap-3">
+                  <div className="w-8 h-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+                  <p className="text-slate-400 text-sm">Carregando fotos...</p>
                 </div>
+              ) : filteredItems.length === 0 ? (
+                <div className="text-center py-16 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                  <p className="text-slate-400 text-sm">Nenhuma foto encontrada.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {filteredItems.map((it) => (
+                    <article
+                      key={it.id}
+                      onClick={() => it.imageUrl && setZoomItem(it)}
+                      className="group relative rounded-xl overflow-hidden border border-slate-100 shadow-sm cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 bg-slate-50"
+                    >
+                      <div className="aspect-square">
+                        <img
+                          src={it.imageUrl || "/images/imagem-erro.webp"}
+                          alt={it.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          onError={(e) => { e.currentTarget.src = "/images/imagem-erro.webp"; e.currentTarget.onerror = null; }}
+                        />
+                      </div>
+                      <div className="p-2.5">
+                        <p className="text-xs font-semibold text-slate-800 truncate">{it.title || "Sem título"}</p>
+                        <p className="text-[10px] text-teal-600 font-bold uppercase tracking-wide mt-0.5 truncate">{it.category}</p>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+          </main>
+        </div>
+      </div>
 
-                {zoomItem.description && (
-                  <p style={modalDesc}>{zoomItem.description}</p>
+      {/* Modal zoom */}
+      {zoomItem && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setZoomItem(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col sm:flex-row"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-slate-900 flex items-center justify-center sm:w-[60%] min-h-[220px]">
+              <img
+                src={zoomItem.imageUrl}
+                alt={zoomItem.title}
+                className="w-full h-full max-h-[70vh] object-contain"
+                onError={(e) => { e.currentTarget.src = "/images/imagem-erro.webp"; e.currentTarget.onerror = null; }}
+              />
+            </div>
+            <div className="flex flex-col gap-3 p-5 sm:w-[40%] overflow-y-auto">
+              <button
+                onClick={() => setZoomItem(null)}
+                className="self-end w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 font-bold transition-colors"
+              >
+                ×
+              </button>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">{zoomItem.title}</h3>
+                {zoomItem.category && (
+                  <span className="text-xs text-teal-600 font-bold uppercase tracking-wide mt-1 block">{zoomItem.category}</span>
                 )}
               </div>
+              {zoomItem.description && (
+                <p className="text-sm text-slate-500 leading-relaxed">{zoomItem.description}</p>
+              )}
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {showCamera && (
-          <div style={modalBackdrop}>
-            <div
-              style={{
-                background: "#ffffff",
-                borderRadius: 16,
-                width: "100%",
-                maxWidth: 500,
-                padding: 20,
-                display: "flex",
-                flexDirection: "column",
-                gap: 16,
-              }}
-            >
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                style={{
-                  width: "100%",
-                  borderRadius: 12,
-                  background: "#000",
-                }}
-              />
-
-              <canvas ref={canvasRef} style={{ display: "none" }} />
-
-              <div style={{ display: "flex", gap: 12 }}>
-                <button
-                  style={{
-                    flex: 1,
-                    padding: "12px",
-                    background: "#2563eb",
-                    color: "#fff",
-                    borderRadius: 8,
-                    border: "none",
-                    fontWeight: 600,
-                  }}
-                  onClick={capturePhoto}
-                >
-                  Capturar
-                </button>
-
-                <button
-                  style={{
-                    flex: 1,
-                    padding: "12px",
-                    background: "#aaa",
-                    color: "#fff",
-                    borderRadius: 8,
-                    border: "none",
-                  }}
-                  onClick={handleCloseCamera}
-                >
-                  Cancelar
-                </button>
-              </div>
+      {/* Modal câmera */}
+      {showCamera && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-5 flex flex-col gap-4">
+            <h3 className="text-base font-bold text-slate-800">Tirar foto</h3>
+            <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden">
+              <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+            </div>
+            <canvas ref={canvasRef} className="hidden" />
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={capturePhoto}
+                className="flex-1 py-2.5 rounded-full bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-all"
+              >
+                Capturar
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCamera(false)}
+                className="flex-1 py-2.5 rounded-full bg-slate-200 text-slate-700 text-sm font-bold hover:bg-slate-300 transition-all"
+              >
+                Cancelar
+              </button>
             </div>
           </div>
-        )}
-      </main>
+        </div>
+      )}
     </>
   );
 }

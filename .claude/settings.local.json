@@ -18,7 +18,8 @@
       "Bash(pip3 install:*)",
       "Bash(python3:*)",
       "Bash(__NEW_LINE_63c7b9f70ca78d67__ cp:*)",
-      "Bash(cp /tmp/favicon.ico /Users/brunoribeiro/Desktop/PEX_APAE-FINAL/PEX_APAE/frontend/public/favicon.ico)"
+      "Bash(cp /tmp/favicon.ico /Users/brunoribeiro/Desktop/PEX_APAE-FINAL/PEX_APAE/frontend/public/favicon.ico)",
+      "Bash(npm uninstall:*)"
     ]
   }
 }

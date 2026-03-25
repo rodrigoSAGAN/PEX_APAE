@@ -402,15 +402,18 @@ export default function CartPage() {
         return;
       }
 
+      const orderData = await res.json();
+      const orderId = orderData?.id || null;
+
       try {
         const pixRes = await fetch("/api/pix", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-
             amount: total,
             totalValue: total,
             description: "Pagamento Portal APAE – Pinhão",
+            orderId: orderId,
           }),
         });
 

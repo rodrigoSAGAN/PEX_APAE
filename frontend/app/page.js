@@ -12,6 +12,8 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import Nav from "../components/Nav";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
+import { db } from "../lib/firebase";
+import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
  
 const SLIDES_MAIN = [
  { src: "/images/faxada.webp", title: "APAE – Pinhão", caption: "Vista da fachada da instituição, acolhendo a comunidade de Pinhão." },
@@ -32,26 +34,34 @@ const EVENTS = [
  { date: "15/12/2025", title: "Feira de Produtos da APAE – Pinhão", desc: "Exposição dos itens cadastrados no Portal APAE.", tag: "Loja APAE", image: "/images/patio3.webp" },
 ];
 
-// Fora do componente — array estático, não precisa ser recriado a cada render
-const GALLERY_IMAGES = [
-  { src: "/images/galeria/1.webp", category: "Eventos", label: "Festa Junina 2024" },
-  { src: "/images/horta1.webp", category: "Atividades Pedagógicas", label: "Aula de Artes" },
-  { src: "/images/patio.webp", category: "Momentos Especiais", label: "Visita ao Parque" },
-  { src: "/images/galeria/2.webp", category: "Eventos", label: "Dia das Crianças" },
-  { src: "/images/horta2.webp", category: "Atividades Pedagógicas", label: "Horta Comunitária" },
-  { src: "/images/galeria/3.webp", category: "Momentos Especiais", label: "Apresentação de Natal" },
-];
 
 export default function HomePage() {
  const [homeEvents, setHomeEvents] = useState(EVENTS);
  const [showTaxModal, setShowTaxModal] = useState(false);
  const [galleryFilter, setGalleryFilter] = useState("Todos");
- 
+ const [galleryItems, setGalleryItems] = useState([]);
+
+ useEffect(() => {
+   const q = query(collection(db, "gallery"), orderBy("createdAt", "desc"));
+   const unsub = onSnapshot(q, (snap) => {
+     setGalleryItems(snap.docs.map((doc) => {
+       const d = doc.data();
+       return { id: doc.id, src: d.imageUrl || "", label: d.title || "", category: d.category || "Outros" };
+     }));
+   }, () => {});
+   return () => unsub();
+ }, []);
+
+ const galleryCategories = useMemo(() => {
+   const cats = new Set(galleryItems.map(i => i.category).filter(Boolean));
+   return ["Todos", ...Array.from(cats)];
+ }, [galleryItems]);
+
  const filteredImages = useMemo(
    () => galleryFilter === "Todos"
-     ? GALLERY_IMAGES
-     : GALLERY_IMAGES.filter(img => img.category === galleryFilter),
-   [galleryFilter]
+     ? galleryItems
+     : galleryItems.filter(img => img.category === galleryFilter),
+   [galleryFilter, galleryItems]
  );
  
  const [emblaRefMain, emblaApiMain] = useEmblaCarousel({ loop: true }, [Autoplay({ delay: 6000 })]);
@@ -329,7 +339,7 @@ export default function HomePage() {
          </div>
  
          <div className="flex flex-wrap justify-center gap-3 mb-10">
-           {["Todos", "Eventos", "Atividades Pedagógicas", "Momentos Especiais"].map((cat) => (
+           {galleryCategories.map((cat) => (
              <button
                key={cat}
                onClick={() => setGalleryFilter(cat)}
@@ -343,33 +353,35 @@ export default function HomePage() {
              </button>
            ))}
          </div>
- 
-         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-           {filteredImages.map((img, idx) => (
-             <div
-               key={idx}
-               className="group relative h-64 rounded-2xl overflow-hidden shadow-md cursor-pointer animate-in fade-in zoom-in-95 duration-500"
-             >
-               <img
-                 src={img.src}
-                 alt={img.label}
-                 loading="lazy"
-                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 bg-slate-200" onError={(e) => { e.currentTarget.src = "/images/imagem-erro.webp"; e.currentTarget.onerror = null; }}
-               />
- 
-               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-6">
-                 <div>
-                   <span className="text-emerald-300 text-xs font-bold uppercase tracking-wider mb-1 block">
-                     {img.category}
-                   </span>
-                   <p className="text-white font-semibold text-lg leading-tight">
-                     {img.label}
-                   </p>
+
+         {galleryItems.length === 0 ? (
+           <div className="text-center py-16 text-slate-400 text-sm">Nenhuma foto cadastrada ainda.</div>
+         ) : filteredImages.length === 0 ? (
+           <div className="text-center py-16 text-slate-400 text-sm">Nenhuma foto nesta categoria.</div>
+         ) : (
+           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+             {filteredImages.map((img) => (
+               <div
+                 key={img.id}
+                 className="group relative h-64 rounded-2xl overflow-hidden shadow-md cursor-pointer"
+               >
+                 <img
+                   src={img.src}
+                   alt={img.label}
+                   loading="lazy"
+                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 bg-slate-200"
+                   onError={(e) => { e.currentTarget.src = "/images/imagem-erro.webp"; e.currentTarget.onerror = null; }}
+                 />
+                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-6">
+                   <div>
+                     <span className="text-emerald-300 text-xs font-bold uppercase tracking-wider mb-1 block">{img.category}</span>
+                     <p className="text-white font-semibold text-lg leading-tight">{img.label}</p>
+                   </div>
                  </div>
                </div>
-             </div>
-           ))}
-         </div>
+             ))}
+           </div>
+         )}
        </section>
  
        <section className="max-w-6xl mx-auto px-6 pt-16 pb-0">

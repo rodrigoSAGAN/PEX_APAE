@@ -553,7 +553,7 @@ export default function EventsPage() {
              </div>
  
              <div className="mb-6">
-               <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2" htmlFor="coverImage">
+               <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
                  Imagem de Capa (opcional)
                </label>
                <div className="flex items-start gap-4">
@@ -563,8 +563,14 @@ export default function EventsPage() {
                      type="file"
                      accept="image/*"
                      onChange={handleImageChange}
-                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                     className="hidden"
                    />
+                   <label
+                     htmlFor="coverImage"
+                     className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl border border-dashed border-slate-300 bg-slate-50 text-slate-600 text-sm font-semibold hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700 transition-colors cursor-pointer select-none"
+                   >
+                     🖼️ Selecionar imagem de capa
+                   </label>
                    <p className="text-xs text-slate-400 mt-1">
                      Formatos aceitos: JPG, PNG, GIF. Tamanho máximo: 5MB.
                    </p>
