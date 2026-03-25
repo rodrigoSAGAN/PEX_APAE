@@ -64,7 +64,6 @@ router.post("/", async (req, res) => {
       },
       payment_method: {
         type: "PIX",
-        installments: 1,
       },
     };
 
