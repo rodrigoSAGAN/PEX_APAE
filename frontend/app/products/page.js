@@ -18,6 +18,7 @@ import SideMenu from "../../components/SideMenu";
 import { getIdTokenOrNull } from "../../lib/authToken";
 import { auth } from "../../lib/firebase";
 import { useModal } from "../../components/ModalContext";
+import { compressImage } from "../../lib/compressImage";
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -602,11 +603,12 @@ export default function ProductsPage() {
                         <input
                           type="file"
                           accept="image/*"
-                          onChange={(e) => {
+                          onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (file) {
-                              setImageFile(file);
-                              setImagePreview(URL.createObjectURL(file));
+                              const compressed = await compressImage(file);
+                              setImageFile(compressed);
+                              setImagePreview(URL.createObjectURL(compressed));
                             } else {
                               setImageFile(null);
                               setImagePreview("");

@@ -24,8 +24,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata = { 
-  title: "Portal APAE",
+export const metadata = {
+  title: {
+    template: "%s | Portal APAE Pinhão",
+    default: "Portal APAE Pinhão",
+  },
+  description: "Portal oficial da APAE Pinhão — eventos, loja solidária, galeria e formas de apoiar.",
   icons: {
     icon: "/favicon.ico",
   },

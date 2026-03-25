@@ -6,10 +6,10 @@
 // =============================================================================
 
 import { Router } from "express";
-import { db, bucket } from "../db/firestore.js";
+import { db } from "../db/firestore.js";
 import admin from "firebase-admin";
 import multer from "multer";
-import path from "path";
+import { uploadToCloudinary } from "../lib/cloudinary.js";
 
 const router = Router();
 
@@ -47,21 +47,9 @@ async function writeAuditLog({
 // Multer em memória — o arquivo fica no buffer e é enviado ao Firebase Storage.
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Faz upload do buffer para o Firebase Storage e retorna a URL pública.
-async function uploadToFirebase(file) {
-  const ext = path.extname(file.originalname) || "";
-  const base = path
-    .basename(file.originalname, ext)
-    .replace(/\s+/g, "-")
-    .toLowerCase();
-  const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
-  const filename = `products/${base}-${unique}${ext}`;
-
-  const fileRef = bucket.file(filename);
-  await fileRef.save(file.buffer, { contentType: file.mimetype });
-  await fileRef.makePublic();
-
-  return `https://storage.googleapis.com/${bucket.name}/${filename}`;
+// Faz upload do buffer para o Cloudinary e retorna a URL pública.
+async function uploadImage(file) {
+  return uploadToCloudinary(file.buffer, "products");
 }
 
 // Middleware que verifica se o usuário pode editar a loja.
@@ -175,7 +163,7 @@ router.post("/", requireAdmin, upload.single("image"), async (req, res) => {
 
     let finalImageUrl = bodyImageUrl || "";
     if (req.file) {
-      finalImageUrl = await uploadToFirebase(req.file);
+      finalImageUrl = await uploadImage(req.file);
     }
 
     const activeBool =
@@ -244,7 +232,7 @@ router.put("/:id", requireAdmin, upload.single("image"), async (req, res) => {
     }
 
     if (req.file) {
-      up.imageUrl = await uploadToFirebase(req.file);
+      up.imageUrl = await uploadImage(req.file);
     }
 
 

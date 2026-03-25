@@ -16,6 +16,7 @@ import Nav from "../../components/Nav";
 import SideMenu from "../../components/SideMenu";
 import { getIdTokenOrNull } from "../../lib/authToken";
 import { useModal } from "../../components/ModalContext";
+import { compressImage } from "../../lib/compressImage";
 
 export default function EventsPage() {
  const { showModal, showConfirm } = useModal();
@@ -188,15 +189,16 @@ export default function EventsPage() {
    }
  }
  
- function handleImageChange(e) {
+ async function handleImageChange(e) {
    const file = e.target.files?.[0];
    if (file) {
-     setImageFile(file);
+     const compressed = await compressImage(file);
+     setImageFile(compressed);
      const reader = new FileReader();
      reader.onloadend = () => {
        setImagePreview(reader.result);
      };
-     reader.readAsDataURL(file);
+     reader.readAsDataURL(compressed);
    }
  }
  

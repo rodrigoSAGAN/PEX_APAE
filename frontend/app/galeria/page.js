@@ -13,7 +13,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import Nav from "../../components/Nav";
 import SideMenu from "../../components/SideMenu";
-import { auth, db, storage } from "../../lib/firebase";
+import { auth, db } from "../../lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   collection,
@@ -23,7 +23,7 @@ import {
   addDoc,
   serverTimestamp,
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { compressImage } from "../../lib/compressImage";
 
 export default function GaleriaPage() {
   const [items, setItems] = useState([]);
@@ -239,17 +239,27 @@ export default function GaleriaPage() {
 
     try {
       setUploading(true);
-      const fileName = `${Date.now()}-${file.name}`;
-      const storageRef = ref(storage, `gallery/${fileName}`);
-      await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
+      const compressed = await compressImage(file);
+
+      const token = user ? await user.getIdToken() : null;
+      const formData = new FormData();
+      formData.append("image", compressed);
+
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+
+      if (!uploadRes.ok) throw new Error("Falha no upload da imagem.");
+      const { imageUrl } = await uploadRes.json();
 
       const colRef = collection(db, "gallery");
       await addDoc(colRef, {
         title: form.title.trim(),
         description: form.description.trim(),
         category: form.category || "Outros",
-        imageUrl: downloadURL,
+        imageUrl,
         createdAt: serverTimestamp(),
       });
 

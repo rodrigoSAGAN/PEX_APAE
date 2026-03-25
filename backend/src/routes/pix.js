@@ -71,7 +71,7 @@ router.post("/", async (req, res) => {
       description: description || "Pagamento Portal APAE – Pinhão",
       payment_method_id: "pix",
       payer: {
-        email: "pagador@test.com",
+        email: req.body?.payerEmail || "pagador@portalapae.com.br",
       },
     };
 
