@@ -149,9 +149,9 @@ export default function ProductsPage() {
     router.push("/carrinho");
   }
 
-  async function load() {
+  async function load(silent = false) {
     setErr("");
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const res = await fetch(API, { cache: "no-store" });
       if (!res.ok) throw new Error("Falha ao buscar produtos");
@@ -161,7 +161,7 @@ export default function ProductsPage() {
       console.error("[products] erro ao carregar produtos:", e);
       setErr("Falha ao carregar produtos. Tente novamente.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
@@ -297,8 +297,7 @@ export default function ProductsPage() {
       setImageFile(null);
       setImagePreview("");
       setShowEditModal(false);
-      await load();
-      router.refresh();
+      await load(true);
     } catch (e) {
       console.error("[products] erro ao salvar produto:", e);
       showModal("Erro inesperado ao salvar produto.", "Erro");
@@ -333,7 +332,7 @@ export default function ProductsPage() {
         return showModal(msg, "Erro");
       }
 
-      await load();
+      await load(true);
     } catch (e) {
       console.error("[products] erro ao excluir produto:", e);
       showModal("Erro inesperado ao excluir produto.", "Erro");

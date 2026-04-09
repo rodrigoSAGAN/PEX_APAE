@@ -13,7 +13,7 @@ import Nav from "../components/Nav";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
 import { db } from "../lib/firebase";
-import { collection, query, orderBy, getDocs, limit } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, limit } from "firebase/firestore";
  
 const SLIDES_MAIN = [
  { src: "/images/faxada.webp", title: "APAE – Pinhão", caption: "Vista da fachada da instituição, acolhendo a comunidade de Pinhão." },
@@ -43,12 +43,13 @@ export default function HomePage() {
 
  useEffect(() => {
    const q = query(collection(db, "gallery"), orderBy("createdAt", "desc"), limit(24));
-   getDocs(q).then((snap) => {
+   const unsub = onSnapshot(q, (snap) => {
      setGalleryItems(snap.docs.map((doc) => {
        const d = doc.data();
        return { id: doc.id, src: d.imageUrl || "", label: d.title || "", category: d.category || "Outros" };
      }));
-   }).catch(() => {});
+   }, () => {});
+   return () => unsub();
  }, []);
 
  const galleryCategories = useMemo(() => {

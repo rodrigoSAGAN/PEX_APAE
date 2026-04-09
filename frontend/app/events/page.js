@@ -55,9 +55,9 @@ export default function EventsPage() {
  const API = "/api/events";
  
  // Busca a lista de eventos da API
- async function load() {
+ async function load(silent = false) {
    setErr("");
-   setLoading(true);
+   if (!silent) setLoading(true);
    try {
      const res = await fetch(API, { cache: "no-store" });
      if (!res.ok) throw new Error("Falha ao buscar eventos");
@@ -67,10 +67,10 @@ export default function EventsPage() {
      console.error("[events] erro ao carregar eventos:", e);
      setErr("Falha ao carregar eventos. Tente novamente.");
    } finally {
-     setLoading(false);
+     if (!silent) setLoading(false);
    }
  }
- 
+
  // Decodifica o JWT para verificar se o usuário pode editar eventos.
  // Admin pode tudo; colaborador precisa da flag canEditEvents.
  async function checkPermissions() {
@@ -180,7 +180,7 @@ export default function EventsPage() {
      setImageFile(null);
      setImagePreview(null);
      setShowEditModal(false);
-     await load();
+     await load(true);
    } catch (e) {
      console.error("[events] erro ao salvar evento:", e);
      showModal("Erro inesperado ao salvar evento.", "Erro");
@@ -318,7 +318,7 @@ export default function EventsPage() {
        return showModal(msg, "Erro");
      }
  
-     await load();
+     await load(true);
    } catch (e) {
      console.error("[events] erro ao excluir evento:", e);
      showModal("Erro inesperado ao excluir evento.", "Erro");
