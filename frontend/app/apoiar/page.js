@@ -6,6 +6,7 @@ import { useState } from "react";
 // Componentes reutilizáveis da aplicação
 import Nav from "../../components/Nav";
 import DonationModal from "../../components/DonationModal";
+import { useModal } from "../../components/ModalContext";
 
 /*
 Lista de valores de doação pré-definidos.
@@ -49,6 +50,7 @@ informar um valor personalizado. Após selecionar o valor,
 um modal é aberto para geração do pagamento via PIX.
 */
 export default function ApoiarPage() {
+  const { showModal } = useModal();
 
   // Controla abertura e fechamento do modal de doação
   const [modalOpen, setModalOpen] = useState(false);
@@ -76,7 +78,7 @@ export default function ApoiarPage() {
     const val = parseFloat(customValue.replace(",", "."));
 
     if (!val || val < 1) {
-      alert("Por favor, insira um valor válido (mínimo R$ 1,00).");
+      showModal("Por favor, insira um valor válido (mínimo R$ 1,00).", "Atenção");
       return;
     }
 

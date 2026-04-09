@@ -42,7 +42,6 @@ export default function RootLayout({ children }) {
         style={{
           margin: 0,
           fontFamily: "system-ui, var(--font-geist-sans), sans-serif",
-          height: "100%",
         }}
         className={`${geistSans.variable} ${geistMono.variable}`}
         suppressHydrationWarning

@@ -20,19 +20,52 @@ import {
   query,
   orderBy,
   onSnapshot,
-  doc,
-  updateDoc,
-  addDoc,
-  serverTimestamp,
-  getDocs,
   limit,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useModal } from "../../components/ModalContext";
 
+// Constantes de estilo estáticas fora do componente — não são recriadas a cada render
+const pageWrap = { minHeight: "100vh", background: "#f8fafc", paddingBottom: 80 };
+const mainContent = { minWidth: 0 };
+const header = { marginBottom: 32, textAlign: "center" };
+const subtitle = { fontSize: 16, color: "#64748b" };
+const tabsWrap = { display: "flex", justifyContent: "center", gap: 8, marginBottom: 24, flexWrap: "wrap" };
+const tabBtn = (isActive) => ({
+  padding: "12px 24px", borderRadius: 999, border: isActive ? "none" : "1px solid #e2e8f0",
+  background: isActive ? "#10b981" : "#ffffff", color: isActive ? "#ffffff" : "#64748b",
+  fontWeight: 700, fontSize: 15, cursor: "pointer", transition: "all 0.2s",
+  boxShadow: isActive ? "0 4px 12px rgba(16, 185, 129, 0.3)" : "0 1px 3px rgba(0,0,0,0.1)",
+});
+const tableWrap = {
+  background: "#ffffff", borderRadius: 16, overflow: "hidden", border: "1px solid #e2e8f0",
+  boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)",
+};
+const table = { width: "100%", borderCollapse: "collapse", textAlign: "left" };
+const th = {
+  padding: "16px 24px", background: "#f1f5f9", color: "#475569", fontWeight: 600,
+  fontSize: 14, textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #e2e8f0",
+};
+const td = { padding: "16px 24px", borderBottom: "1px solid #e2e8f0", color: "#334155", fontSize: 15 };
+const checkbox = { width: 20, height: 20, cursor: "pointer", accentColor: "#16a34a" };
+const statusBadge = (delivered) => ({
+  display: "inline-flex", alignItems: "center", padding: "4px 12px", borderRadius: 9999,
+  fontSize: 12, fontWeight: 600,
+  background: delivered ? "#dcfce7" : "#fee2e2", color: delivered ? "#166534" : "#991b1b",
+});
+const donationBadge = {
+  display: "inline-flex", alignItems: "center", padding: "2px 8px", borderRadius: 999,
+  fontSize: 11, fontWeight: 700, background: "#fef3c7", color: "#b45309", marginLeft: 8,
+};
+const cardGrid = { display: "flex", flexDirection: "column", gap: 16 };
+const card = { background: "#ffffff", borderRadius: 12, padding: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.1)", border: "1px solid #e2e8f0" };
+const cardRow = { display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 14 };
+const cardLabel = { color: "#64748b", fontWeight: 500 };
+const cardValue = { color: "#1e293b", fontWeight: 600, textAlign: "right" };
+
 export default function PedidosPage() {
-  const { showModal } = useModal();
+  const { showModal, showConfirm } = useModal();
   const [soldItems, setSoldItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -94,7 +127,7 @@ export default function PedidosPage() {
     if (!authorized) return;
 
     setLoading(true);
-    const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
+    const q = query(collection(db, "orders"), orderBy("createdAt", "desc"), limit(300));
 
     const unsubscribe = onSnapshot(
       q,
@@ -232,208 +265,27 @@ export default function PedidosPage() {
 
     } catch (err) {
       console.error("Erro ao atualizar status de entrega:", err);
-      alert("Erro ao atualizar status. Revertendo...");
+      await showModal("Erro ao atualizar status. Revertendo...", "Erro");
       setSoldItems(originalItems);
     }
   };
 
-  // Cria um pedido falso no Firestore para fins de teste — útil para verificar
-  // se o fluxo de exibição e entrega está funcionando sem precisar fazer um PIX real.
-  const simulateSale = async () => {
-    if (!confirm("Confirmar simulação de venda? Isso criará um pedido falso no banco de dados.")) return;
-
-    try {
-      const productsRef = collection(db, "products");
-      const q = query(productsRef, limit(1));
-      const snapshot = await getDocs(q);
-
-      let productItem = {
-        name: "Produto Teste Simulado",
-        price: 10.0,
-        quantity: 1,
-        delivered: false
-      };
-
-      if (!snapshot.empty) {
-        const docData = snapshot.docs[0].data();
-        productItem = {
-          name: docData.name || docData.title || "Produto Simulado",
-          price: Number(docData.price || 10),
-          quantity: 1,
-          delivered: false
-        };
-      }
-
-      await addDoc(collection(db, "orders"), {
-        createdAt: serverTimestamp(),
-        status: "paid",
-        paymentStatus: "approved",
-        items: [productItem],
-        buyerName: "Simulação Admin",
-        userEmail: currentUser?.email || "admin@teste.com",
-        total: productItem.price,
-        simulated: true
-      });
-
-      alert("Venda simulada criada com sucesso!");
-    } catch (e) {
-      console.error("Erro ao simular venda:", e);
-      alert("Erro ao criar simulação.");
-    }
-  };
-
-  const pageWrap = {
-    minHeight: "100vh",
-    background: "#f8fafc",
-    paddingBottom: 80,
-  };
-
-  const gridLayout = {
+  // Estilos dependentes de isMobile — memoizados para evitar recriar objetos em cada render
+  const gridLayout = useMemo(() => ({
     display: "grid",
     gridTemplateColumns: isMobile ? "1fr" : "260px 1fr",
     gap: 16,
     maxWidth: 1200,
     margin: "0 auto",
     padding: isMobile ? "20px 16px" : "40px 24px",
-  };
+  }), [isMobile]);
 
-  const mainContent = {
-    minWidth: 0,
-  };
-
-  const header = {
-    marginBottom: 32,
-    textAlign: "center",
-  };
-
-  const title = {
+  const title = useMemo(() => ({
     fontSize: isMobile ? 24 : 32,
     fontWeight: 800,
     color: "#1e293b",
     marginBottom: 8,
-  };
-
-  const subtitle = {
-    fontSize: 16,
-    color: "#64748b",
-  };
-
-  const tabsWrap = {
-    display: "flex",
-    justifyContent: "center",
-    gap: 8,
-    marginBottom: 24,
-    flexWrap: "wrap",
-  };
-
-  const tabBtn = (isActive) => ({
-    padding: "12px 24px",
-    borderRadius: 999,
-    border: "none",
-    background: isActive ? "#10b981" : "#ffffff",
-    color: isActive ? "#ffffff" : "#64748b",
-    fontWeight: 700,
-    fontSize: 15,
-    cursor: "pointer",
-    transition: "all 0.2s",
-    boxShadow: isActive ? "0 4px 12px rgba(16, 185, 129, 0.3)" : "0 1px 3px rgba(0,0,0,0.1)",
-    border: isActive ? "none" : "1px solid #e2e8f0",
-  });
-
-  const tableWrap = {
-    background: "#ffffff",
-    borderRadius: 16,
-    boxShadow:
-      "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-    overflow: "hidden",
-    border: "1px solid #e2e8f0",
-  };
-
-  const table = {
-    width: "100%",
-    borderCollapse: "collapse",
-    textAlign: "left",
-  };
-
-  const th = {
-    padding: "16px 24px",
-    background: "#f1f5f9",
-    color: "#475569",
-    fontWeight: 600,
-    fontSize: 14,
-    textTransform: "uppercase",
-    letterSpacing: "0.05em",
-    borderBottom: "1px solid #e2e8f0",
-  };
-
-  const td = {
-    padding: "16px 24px",
-    borderBottom: "1px solid #e2e8f0",
-    color: "#334155",
-    fontSize: 15,
-  };
-
-  const checkbox = {
-    width: 20,
-    height: 20,
-    cursor: "pointer",
-    accentColor: "#16a34a",
-  };
-
-  const statusBadge = (delivered) => ({
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "4px 12px",
-    borderRadius: 9999,
-    fontSize: 12,
-    fontWeight: 600,
-    background: delivered ? "#dcfce7" : "#fee2e2",
-    color: delivered ? "#166534" : "#991b1b",
-  });
-
-  const donationBadge = {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "2px 8px",
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: 700,
-    background: "#fef3c7",
-    color: "#b45309",
-    marginLeft: 8,
-  };
-
-  const cardGrid = {
-    display: "flex",
-    flexDirection: "column",
-    gap: 16,
-  };
-
-  const card = {
-    background: "#ffffff",
-    borderRadius: 12,
-    padding: 16,
-    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-    border: "1px solid #e2e8f0",
-  };
-
-  const cardRow = {
-    display: "flex",
-    justifyContent: "space-between",
-    marginBottom: 8,
-    fontSize: 14,
-  };
-
-  const cardLabel = {
-    color: "#64748b",
-    fontWeight: 500,
-  };
-
-  const cardValue = {
-    color: "#1e293b",
-    fontWeight: 600,
-    textAlign: "right",
-  };
+  }), [isMobile]);
 
   if (checkingAuth) {
     return (
@@ -491,28 +343,6 @@ export default function PedidosPage() {
             <p style={subtitle}>
               Acompanhe os produtos vendidos e status de entrega
             </p>
-          </div>
-
-          <div style={{ textAlign: "center", marginBottom: 24 }}>
-            <button
-              onClick={simulateSale}
-              style={{
-                background: "#7c3aed",
-                color: "#fff",
-                border: "none",
-                padding: "8px 20px",
-                borderRadius: 999,
-                cursor: "pointer",
-                fontWeight: 700,
-                fontSize: 14,
-                boxShadow: "0 4px 12px rgba(124, 58, 237, 0.3)",
-                transition: "transform 0.2s",
-              }}
-              onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
-              onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
-            >
-              🛠 Simular Venda (Teste)
-            </button>
           </div>
 
           <div style={tabsWrap}>

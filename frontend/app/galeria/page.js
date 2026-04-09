@@ -16,8 +16,11 @@ import {
   onSnapshot,
   addDoc,
   serverTimestamp,
+  limit,
 } from "firebase/firestore";
 import { compressImage } from "../../lib/compressImage";
+import { cloudinaryUrl, cloudinarySrcSet } from "../../lib/cloudinaryUrl";
+import { useModal } from "../../components/ModalContext";
 
 const CATEGORY_OPTIONS = [
   "Eventos",
@@ -29,6 +32,7 @@ const CATEGORY_OPTIONS = [
 ];
 
 export default function GaleriaPage() {
+  const { showModal, showConfirm } = useModal();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -50,6 +54,16 @@ export default function GaleriaPage() {
   const [showCamera, setShowCamera] = useState(false);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+
+  // Estados para edição de fotos existentes
+  const [editing, setEditing] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({ title: "", description: "", category: "Eventos" });
+  const [editFile, setEditFile] = useState(null);
+  const [editFilePreview, setEditFilePreview] = useState(null);
+  const [editFileInputKey, setEditFileInputKey] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(null);
 
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -83,7 +97,7 @@ export default function GaleriaPage() {
   useEffect(() => {
     try {
       const colRef = collection(db, "gallery");
-      const q = query(colRef, orderBy("createdAt", "desc"));
+      const q = query(colRef, orderBy("createdAt", "desc"), limit(120));
       const unsub = onSnapshot(
         q,
         (snap) => {
@@ -157,14 +171,102 @@ export default function GaleriaPage() {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext("2d").drawImage(video, 0, 0);
-    canvas.toBlob((blob) => {
+    canvas.toBlob(async (blob) => {
       if (!blob) { setErr("Falha ao capturar imagem."); return; }
       const photoFile = new File([blob], "foto.jpg", { type: "image/jpeg" });
-      setFile(photoFile);
-      setFilePreview(URL.createObjectURL(photoFile));
+      const compressed = await compressImage(photoFile);
+      setFile(compressed);
+      setFilePreview(URL.createObjectURL(compressed));
       setShowCamera(false);
-    }, "image/jpeg", 0.7);
+    }, "image/jpeg", 0.9);
   };
+
+  async function handleDelete(id) {
+    if (!(await showConfirm("Excluir esta foto da galeria?"))) return;
+    setDeleting(id);
+    try {
+      const token = user ? await user.getIdToken() : null;
+      if (!token) { setErr("Faça login para excluir fotos."); setDeleting(null); return; }
+
+      const res = await fetch(`/api/gallery/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        const msg =
+          res.status === 401 ? "Você não está autenticado." :
+          res.status === 403 ? "Permissão negada." :
+          res.status === 404 ? "Foto não encontrada." :
+          "Falha ao excluir foto.";
+        setErr(msg);
+      }
+      // onSnapshot atualiza a lista automaticamente
+    } catch {
+      setErr("Erro inesperado ao excluir foto.");
+    } finally {
+      setDeleting(null);
+    }
+  }
+
+  async function handleEditSave(e) {
+    e.preventDefault();
+    if (!editForm.title.trim()) { setErr("Informe um título."); return; }
+    setSaving(true);
+    setErr("");
+    try {
+      const token = user ? await user.getIdToken() : null;
+      if (!token) { setErr("Faça login para editar fotos."); setSaving(false); return; }
+
+      let res;
+      if (editFile) {
+        // editFile já está comprimido para WebP desde a seleção
+        const formData = new FormData();
+        formData.append("title", editForm.title.trim());
+        formData.append("description", editForm.description.trim());
+        formData.append("category", editForm.category);
+        formData.append("image", editFile);
+        res = await fetch(`/api/gallery/${editing.id}`, {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+      } else {
+        res = await fetch(`/api/gallery/${editing.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            title: editForm.title.trim(),
+            description: editForm.description.trim(),
+            category: editForm.category,
+          }),
+        });
+      }
+
+      if (!res.ok) {
+        const msg =
+          res.status === 401 ? "Você não está autenticado." :
+          res.status === 403 ? "Permissão negada." :
+          "Falha ao salvar alterações.";
+        setErr(msg);
+      } else {
+        setShowEditModal(false);
+        setEditing(null);
+        setEditFile(null);
+        setEditFilePreview(null);
+        setEditFileInputKey((k) => k + 1);
+        setSuccess("Foto atualizada com sucesso!");
+        setTimeout(() => setSuccess(""), 4000);
+      }
+    } catch {
+      setErr("Erro inesperado ao salvar alterações.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function handleUpload(e) {
     e.preventDefault();
@@ -176,10 +278,10 @@ export default function GaleriaPage() {
 
     try {
       setUploading(true);
-      const compressed = await compressImage(file);
+      // file já está comprimido para WebP desde a seleção
       const token = user ? await user.getIdToken() : null;
       const formData = new FormData();
-      formData.append("image", compressed);
+      formData.append("image", file);
 
       const uploadRes = await fetch("/api/upload", {
         method: "POST",
@@ -293,10 +395,12 @@ export default function GaleriaPage() {
                         id="gallery-file-input"
                         type="file"
                         accept="image/*"
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const f = e.target.files?.[0] || null;
-                          setFile(f);
-                          setFilePreview(f ? URL.createObjectURL(f) : null);
+                          if (!f) { setFile(null); setFilePreview(null); return; }
+                          const compressed = await compressImage(f);
+                          setFile(compressed);
+                          setFilePreview(URL.createObjectURL(compressed));
                         }}
                         className="hidden"
                       />
@@ -391,15 +495,43 @@ export default function GaleriaPage() {
                     >
                       <div className="aspect-square">
                         <img
-                          src={it.imageUrl || "/images/imagem-erro.webp"}
+                          src={cloudinaryUrl(it.imageUrl, { width: 480 }) || "/images/imagem-erro.webp"}
+                          srcSet={cloudinarySrcSet(it.imageUrl)}
+                          sizes="(max-width: 768px) 50vw, 25vw"
                           alt={it.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           onError={(e) => { e.currentTarget.src = "/images/imagem-erro.webp"; e.currentTarget.onerror = null; }}
                         />
                       </div>
                       <div className="p-2.5">
-                        <p className="text-xs font-semibold text-slate-800 truncate">{it.title || "Sem título"}</p>
-                        <p className="text-[10px] text-teal-600 font-bold uppercase tracking-wide mt-0.5 truncate">{it.category}</p>
+                        <p className="text-sm font-semibold text-slate-800 truncate leading-snug mt-0.5">{it.title || "Sem título"}</p>
+                        <p className="text-xs text-teal-600 font-bold uppercase tracking-wide mt-0.5 truncate">{it.category}</p>
+                        {canEditGallery && (
+                          <div className="flex gap-1.5 mt-2" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditing(it);
+                                setEditForm({ title: it.title, description: it.description, category: it.category });
+                                setEditFile(null);
+                                setEditFilePreview(it.imageUrl || "");
+                                setEditFileInputKey((k) => k + 1);
+                                setShowEditModal(true);
+                              }}
+                              className="flex-1 py-2 rounded-lg bg-blue-50 text-blue-600 text-xs font-bold hover:bg-blue-100 active:bg-blue-200 transition-colors"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              disabled={deleting === it.id}
+                              onClick={() => handleDelete(it.id)}
+                              className="flex-1 py-2 rounded-lg bg-red-50 text-red-500 text-xs font-bold hover:bg-red-100 active:bg-red-200 transition-colors disabled:opacity-50"
+                            >
+                              {deleting === it.id ? "..." : "Excluir"}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </article>
                   ))}
@@ -422,7 +554,9 @@ export default function GaleriaPage() {
           >
             <div className="bg-slate-900 flex items-center justify-center sm:w-[60%] min-h-[220px]">
               <img
-                src={zoomItem.imageUrl}
+                src={cloudinaryUrl(zoomItem.imageUrl, { width: 1200 }) || zoomItem.imageUrl}
+                srcSet={cloudinarySrcSet(zoomItem.imageUrl)}
+                sizes="(max-width: 768px) 100vw, 60vw"
                 alt={zoomItem.title}
                 className="w-full h-full max-h-[70vh] object-contain"
                 onError={(e) => { e.currentTarget.src = "/images/imagem-erro.webp"; e.currentTarget.onerror = null; }}
@@ -445,6 +579,118 @@ export default function GaleriaPage() {
                 <p className="text-sm text-slate-500 leading-relaxed">{zoomItem.description}</p>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal edição */}
+      {showEditModal && editing && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setShowEditModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 flex flex-col gap-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-800">Editar foto</h3>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 font-bold transition-colors"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSave} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-slate-600">Título <span className="text-red-400">*</span></label>
+                <input
+                  type="text"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
+                  className="px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-slate-600">Categoria</label>
+                <select
+                  value={editForm.category}
+                  onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value }))}
+                  className="px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all bg-white"
+                >
+                  {CATEGORY_OPTIONS.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-slate-600">Descrição <span className="text-slate-400 font-normal">(opcional)</span></label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                  rows={2}
+                  className="px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all resize-none"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-semibold text-slate-600">Imagem <span className="text-slate-400 font-normal">(deixe em branco para manter a atual)</span></label>
+                <input
+                  key={editFileInputKey}
+                  id="edit-gallery-file-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0] || null;
+                    if (!f) { setEditFile(null); setEditFilePreview(editing?.imageUrl || ""); return; }
+                    const compressed = await compressImage(f);
+                    setEditFile(compressed);
+                    setEditFilePreview(URL.createObjectURL(compressed));
+                  }}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="edit-gallery-file-input"
+                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-full border border-dashed border-slate-300 bg-slate-50 text-slate-600 text-xs font-semibold hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-700 transition-colors cursor-pointer select-none"
+                >
+                  🖼️ Trocar imagem
+                </label>
+                {editFilePreview && (
+                  <img
+                    src={editFilePreview}
+                    alt="Pré-visualização"
+                    className="w-full h-36 object-cover rounded-xl border border-slate-200 mt-1"
+                    onError={(e) => { e.currentTarget.src = "/images/imagem-erro.webp"; e.currentTarget.onerror = null; }}
+                  />
+                )}
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="flex-1 py-2.5 rounded-full bg-slate-200 text-slate-700 text-sm font-bold hover:bg-slate-300 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex-1 py-2.5 rounded-full bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {saving ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Salvando...
+                    </>
+                  ) : "Salvar"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

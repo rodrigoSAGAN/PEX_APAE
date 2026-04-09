@@ -1,7 +1,10 @@
 // =============================================================================
 // Rota principal de geração de pagamento PIX via PagBank.
-// Recebe o valor e o orderId, cria a cobrança no PagBank e retorna
+// Recebe o valor e o orderId, cria um pedido no PagBank (/orders) e retorna
 // o QR Code (imagem base64 + código copia-e-cola) pro frontend exibir.
+//
+// Nota: a API /charges foi descontinuada pelo PagBank. Esta rota usa a API
+// atualizada /orders com qr_codes, conforme exigido pelo time de integração.
 // =============================================================================
 
 import { Router } from "express";
@@ -55,20 +58,27 @@ router.post("/", async (req, res) => {
     // PagBank usa centavos (inteiro).
     const valueInCents = Math.round(value * 100);
 
+    const referenceId = orderId || `order_${Date.now()}`;
+
     const body = {
-      reference_id: orderId || `order_${Date.now()}`,
-      description: description || "Pagamento Portal APAE – Pinhão",
-      amount: {
-        value: valueInCents,
-        currency: "BRL",
-      },
-      payment_method: {
-        type: "PIX",
-        pix: {
+      reference_id: referenceId,
+      items: [
+        {
+          reference_id: "item_1",
+          name: description || "Pagamento Portal APAE – Pinhão",
+          quantity: 1,
+          unit_amount: valueInCents,
+        },
+      ],
+      qr_codes: [
+        {
+          amount: {
+            value: valueInCents,
+          },
           // QR Code expira em 24 horas
           expiration_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         },
-      },
+      ],
     };
 
     // Só inclui notification_urls se a URL estiver configurada.
@@ -76,16 +86,15 @@ router.post("/", async (req, res) => {
       body.notification_urls = [WEBHOOK_URL];
     }
 
-    const result = await axios.post(`${PAGBANK_BASE}/charges`, body, {
+    const result = await axios.post(`${PAGBANK_BASE}/orders`, body, {
       headers: {
         Authorization: `Bearer ${PAGBANK_TOKEN}`,
         "Content-Type": "application/json",
       },
     });
 
-    const charge = result.data;
-    const pixData = charge?.payment_method?.pix;
-    const qrCodeText = pixData?.qr_codes?.[0]?.text || null;
+    const order = result.data;
+    const qrCodeText = order?.qr_codes?.[0]?.text || null;
 
     // Gera a imagem do QR Code em base64 a partir do texto copia-e-cola.
     let qr_code_base64 = null;
@@ -96,8 +105,8 @@ router.post("/", async (req, res) => {
     }
 
     return res.status(201).json({
-      id: charge.id,
-      status: charge.status,
+      id: order.id,
+      status: order.status,
       qr_code: qrCodeText,
       qr_code_base64: qr_code_base64,
       ticket_url: null,

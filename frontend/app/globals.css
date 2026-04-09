@@ -7,12 +7,15 @@
 }
 
 @layer base {
-  html, body {
+  html {
     @apply h-full w-full max-w-full overflow-x-hidden bg-[var(--background)] text-[var(--foreground)];
   }
 
   body {
-    @apply m-0 font-sans antialiased;
+    @apply m-0 font-sans antialiased w-full max-w-full overflow-x-hidden bg-[var(--background)] text-[var(--foreground)];
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
   }
 
   * {
@@ -62,4 +65,19 @@
   .skip-to-content:focus {
     top: 0;
   }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-transition {
+  animation: page-in 0.22s ease both;
 }

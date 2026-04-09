@@ -3,6 +3,8 @@
 // Isso compensa a navbar fixa (fixed) que fica por cima do conteúdo.
 // Nas páginas de auth (login, cadastro) e dashboard, não adiciona padding
 // porque essas telas têm layout próprio.
+// flex: 1 garante que o conteúdo sempre expanda até empurrar o footer
+// para o rodapé, evitando o bug de "footer subindo" em páginas com pouco conteúdo.
 // =============================================================================
 
 "use client";
@@ -21,8 +23,12 @@ export default function PageContentWrapper({ children }) {
     pathname?.startsWith("/dashboard/");
 
   const style = isExcluded
-    ? {}
-    : { paddingTop: "150px" };
+    ? { flex: 1 }
+    : { paddingTop: "150px", flex: 1 };
 
-  return <div style={style}>{children}</div>;
+  return (
+    <div style={style} className="page-transition">
+      {children}
+    </div>
+  );
 }

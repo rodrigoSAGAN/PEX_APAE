@@ -3,11 +3,8 @@
 //
 // Área exclusiva para administradores: lista todos os usuários do sistema
 // e permite conceder/revogar duas permissões granulares:
-//   - canEditStore: permite editar produtos na loja (cozinha)
+//   - canEditStore: permite editar produtos na loja
 //   - canEditEvents: permite editar eventos
-// Quando uma permissão é concedida, o backend adiciona automaticamente o
-// papel "colaborador" ao usuário. Quando ambas são revogadas, o papel é
-// removido. Admins não podem ter suas permissões alteradas por aqui.
 // =============================================================================
 
 "use client";
@@ -16,9 +13,9 @@ import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import Nav from "../../components/Nav";
 import { auth } from "../../lib/firebase";
-import Link from "next/link";
 import SideMenu from "../../components/SideMenu";
 import { useModal } from "../../components/ModalContext";
+import Spinner from "../../components/Spinner";
 
 export default function ControlePage() {
   const { showModal, showConfirm } = useModal();
@@ -26,190 +23,93 @@ export default function ControlePage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [busyUid, setBusyUid] = useState(null);
-  const [claims, setClaims] = useState(null); 
+  const [claims, setClaims] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
 
- 
   const API = `/api/users`;
 
-  console.log("[controle] componente montado");
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
-
-  // Busca a lista de todos os usuários do sistema via API (requer token de admin)
   async function loadUsers(firebaseUser) {
-    console.log("[controle] loadUsers() chamado");
     setErr("");
     setLoading(true);
-
     try {
       const token = await firebaseUser.getIdToken(true);
-
-      console.log("[controle] Token atualizado para UID:", firebaseUser.uid);
-
-      const res = await fetch(API, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      console.log("[controle] Resposta /api/users:", res.status);
-
+      const res = await fetch(API, { headers: { Authorization: `Bearer ${token}` } });
       if (res.status === 401 || res.status === 403) {
         setErr("Apenas administradores podem acessar esta área.");
         setUsers([]);
         return;
       }
-
       if (!res.ok) throw new Error("Falha ao buscar usuários");
-
       const data = await res.json();
-      console.log("[controle] Usuários recebidos:", data);
-
       setUsers(Array.isArray(data) ? data : []);
     } catch (e) {
-      console.error("[controle] Erro em loadUsers:", e);
       setErr("Não foi possível carregar os usuários. Tente novamente.");
     } finally {
       setLoading(false);
     }
   }
 
-
-  // Alterna a permissão de edição da loja (canEditStore) para o usuário selecionado.
-  // Pede confirmação antes e atualiza o estado local com a resposta da API.
   async function toggleStorePermission(user, firebaseUser) {
     const next = !user.canEditStore;
-
-    if (
-      !(await showConfirm(
-        next
-          ? `Conceder permissão para editar a LOJA a ${user.email}?`
-          : `Revogar permissão de edição da LOJA de ${user.email}?`
-      ))
-    ) {
-      return;
-    }
+    if (!(await showConfirm(
+      next
+        ? `Conceder permissão para editar a LOJA a ${user.email}?`
+        : `Revogar permissão de edição da LOJA de ${user.email}?`
+    ))) return;
 
     try {
       setBusyUid(user.uid);
-
       const token = await firebaseUser.getIdToken(true);
-      const url = `${API}/${user.uid}/permissions`;
-
-      console.log("[controle] Chamando API /permissions (LOJA):", url);
-
-      const res = await fetch(url, {
+      const res = await fetch(`${API}/${user.uid}/permissions`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ canEditStore: next }),
       });
-
-      console.log("[controle] Resposta /permissions LOJA:", res.status);
-
-      if (!res.ok) {
-        showModal("Não foi possível atualizar permissão de LOJA.", "Erro");
-        return;
-      }
-
+      if (!res.ok) { showModal("Não foi possível atualizar permissão de LOJA.", "Erro"); return; }
       const updated = await res.json();
-
-      console.log("[controle] Atualizado (LOJA):", updated);
-
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.uid === user.uid
-            ? {
-                ...u,
-                canEditStore: updated.canEditStore,
-                canEditEvents: updated.canEditEvents,
-                roles: updated.roles,
-              }
-            : u
-        )
-      );
-    } catch (e) {
-      console.error("[controle] Erro toggleStorePermission:", e);
+      setUsers((prev) => prev.map((u) => u.uid === user.uid ? { ...u, ...updated } : u));
+    } catch {
       showModal("Erro ao atualizar permissão.", "Erro");
     } finally {
       setBusyUid(null);
     }
   }
 
-  
-  // Alterna a permissão de edição de eventos (canEditEvents) para o usuário selecionado
   async function toggleEventsPermission(user, firebaseUser) {
     const next = !user.canEditEvents;
-
-    if (
-      !(await showConfirm(
-        next
-          ? `Conceder permissão para editar EVENTOS a ${user.email}?`
-          : `Revogar permissão de edição de EVENTOS de ${user.email}?`
-      ))
-    ) {
-      return;
-    }
+    if (!(await showConfirm(
+      next
+        ? `Conceder permissão para editar EVENTOS a ${user.email}?`
+        : `Revogar permissão de edição de EVENTOS de ${user.email}?`
+    ))) return;
 
     try {
       setBusyUid(user.uid);
-
       const token = await firebaseUser.getIdToken(true);
-      const url = `${API}/${user.uid}/permissions`;
-
-      console.log("[controle] Chamando API /permissions (EVENTOS):", url);
-
-      const res = await fetch(url, {
+      const res = await fetch(`${API}/${user.uid}/permissions`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ canEditEvents: next }),
       });
-
-      console.log("[controle] Resposta /permissions EVENTOS:", res.status);
-
-      if (!res.ok) {
-        showModal("Não foi possível atualizar permissão de EVENTOS.", "Erro");
-        return;
-      }
-
+      if (!res.ok) { showModal("Não foi possível atualizar permissão de EVENTOS.", "Erro"); return; }
       const updated = await res.json();
-
-      console.log("[controle] Atualizado (EVENTOS):", updated);
-
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.uid === user.uid
-            ? {
-                ...u,
-                canEditStore: updated.canEditStore,
-                canEditEvents: updated.canEditEvents,
-                roles: updated.roles,
-              }
-            : u
-        )
-      );
-    } catch (e) {
-      console.error("[controle] Erro toggleEventsPermission:", e);
+      setUsers((prev) => prev.map((u) => u.uid === user.uid ? { ...u, ...updated } : u));
+    } catch {
       showModal("Erro ao atualizar permissão.", "Erro");
     } finally {
       setBusyUid(null);
     }
   }
 
-
   useEffect(() => {
-    console.log("[controle] useEffect inicial");
-
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log(
-        "[controle] onAuthStateChanged →",
-        firebaseUser ? firebaseUser.uid : null
-      );
-
       if (!firebaseUser) {
         setErr("Você precisa estar logado como ADMIN para acessar esta página.");
         setUsers([]);
@@ -217,338 +117,246 @@ export default function ControlePage() {
         setLoading(false);
         return;
       }
-
       try {
         const tokenResult = await firebaseUser.getIdTokenResult(true);
         const c = tokenResult.claims || {};
         setClaims(c);
-
         const roles = Array.isArray(c.roles) ? c.roles : [];
-        const isAdmin = roles.includes("admin");
-
-        if (!isAdmin) {
+        if (!roles.includes("admin")) {
           setErr("Apenas administradores podem acessar esta área.");
           setUsers([]);
           setLoading(false);
           return;
         }
-
-        
         loadUsers(firebaseUser);
-      } catch (e) {
-        console.error("[controle] erro ao ler claims:", e);
+      } catch {
         setErr("Erro de autenticação. Faça login novamente.");
         setUsers([]);
         setLoading(false);
       }
     });
-
     return () => unsub();
   }, []);
 
-  
-  const roles = Array.isArray(claims?.roles) ? claims.roles : [];
-  const isAdmin = roles.includes("admin");
-  const isColab = roles.includes("colaborador");
-  const canStore = claims?.canEditStore === true;
-  const canEvents = claims?.canEditEvents === true;
-
-  const page = {
-    minHeight: "calc(100svh - 56px)",
-    padding: "16px 16px 80px 16px",
-    display: "grid",
-    gridTemplateColumns: "260px 1fr",
-    gap: 16,
-    maxWidth: 1120,
-    margin: "0 auto",
-    background: "#e6f3ff", 
-  };
-
-  const panelBase = {
-    border: "1px solid #e5e7eb",
-    borderRadius: 12,
-    padding: 12,
-    background: "#ffffff",
-    minHeight: 0,
-    display: "grid",
-    gridTemplateRows: "auto 1fr",
-    gap: 8,
-  };
-
-  const asidePanel = { ...panelBase };
-
-  const mainPanel = {
-    ...panelBase,
-    overflow: "hidden",
-  };
-
-  const wrap = {
-    maxWidth: "100%",
-    margin: "0 auto",
-  };
-
-  const title = {
-    fontSize: 26,
-    fontWeight: 700,
-    color: "#0f172a",
-    marginBottom: 8,
-    textAlign: "left",
-  };
-
-  const subtitle = {
-    fontSize: 14,
-    color: "#64748b",
-    marginBottom: 16,
-  };
-
-  const card = {
-    background: "#ffffff",
-    borderRadius: 16,
-    border: "1px solid #e5e7eb",
-    boxShadow: "0 10px 26px rgba(15,23,42,0.06)",
-    padding: 16,
-  };
-
-  const tableWrap = {
-    width: "100%",
-    overflowX: "auto",
-  };
-
-  const table = {
-    width: "100%",
-    borderCollapse: "separate",
-    borderSpacing: 0,
-    fontSize: 14,
-  };
-
-  const th = {
-    textAlign: "left",
-    padding: "10px 12px",
-    background: "#f3f4f6",
-    color: "#111827",
-    fontWeight: 700,
-    borderBottom: "1px solid #e5e7eb",
-    fontSize: 13,
-    whiteSpace: "nowrap",
-  };
-
-  const td = {
-    padding: "10px 12px",
-    borderBottom: "1px solid #f1f5f9",
-    color: "#4b5563",
-    verticalAlign: "middle",
-  };
-
-  const rowAlt = { background: "#f9fafb" };
-
-  const pill = {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 4,
-    padding: "2px 8px",
-    borderRadius: 999,
-    fontSize: 11,
-    borderWidth: "1px",
-    borderStyle: "solid",
-    borderColor: "#bbf7d0",
-    background: "#ecfdf5",
-    color: "#166534",
-  };
-
-  const pillMuted = {
-    ...pill,
-    borderColor: "#e5e7eb",
-    background: "#f9fafb",
-    color: "#6b7280",
-  };
-
-  const btn = {
-    padding: "6px 10px",
-    borderRadius: 999,
-    border: "none",
-    fontSize: 13,
-    cursor: "pointer",
-    fontWeight: 600,
-  };
-
-  const btnGrant = {
-    ...btn,
-    background: "#16a34a",
-    color: "#ffffff",
-  };
-
-  const btnRevoke = {
-    ...btn,
-    background: "#f97316",
-    color: "#ffffff",
-  };
-
-  const empty = {
-    textAlign: "center",
-    padding: 16,
-    color: "#6b7280",
-  };
-
-  const errorBox = {
-    background: "#fef2f2",
-    borderRadius: 8,
-    border: "1px solid #fecaca",
-    color: "#991b1b",
-    padding: "10px 12px",
-    marginBottom: 12,
-    fontSize: 14,
-  };
-
-  const asideList = { listStyle: "none", lineHeight: 1.8, color: "#334155" };
-
-  const inactiveItem = {
-    opacity: 0.5,
-    cursor: "not-allowed",
-  };
-
-  const linkStyle = {
-    color: "#0f172a",
-    textDecoration: "none",
-  };
+  const showSidebar = !isMobile && !!claims;
 
   return (
     <>
       <Nav />
-      <main style={page}>
-        {}
-        <SideMenu claims={claims} />
+      <div className="min-h-screen bg-blue-50/60 pb-20">
+        <div className={`max-w-[1120px] mx-auto px-4 pt-6 ${showSidebar ? "md:grid md:grid-cols-[260px_1fr] md:gap-4" : ""}`}>
+          {showSidebar && <SideMenu claims={claims} />}
 
-        <section style={mainPanel}>
-          <div style={wrap}>
-            <h1 style={title}>Controle de acesso</h1>
+          <main className="flex flex-col gap-5 min-w-0">
+            {/* Cabeçalho */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 sm:p-6">
+              <h1 className="text-2xl font-bold text-slate-900 mb-1">Controle de acesso</h1>
+              <p className="text-slate-500 text-sm leading-relaxed">
+                Área exclusiva para administradores. Defina permissões de edição para loja e eventos.
+              </p>
+            </div>
 
-            <p style={subtitle}>
-              Área exclusiva para administradores: defina permissões de edição
-              para loja (cozinha) e eventos.
-            </p>
+            {/* Erro */}
+            {err && (
+              <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm font-medium">
+                {err}
+              </div>
+            )}
 
-            {err && <div style={errorBox}>{err}</div>}
-
-            <div style={card}>
+            {/* Conteúdo */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
               {loading ? (
-                <div style={empty}>Carregando usuários...</div>
+                <Spinner message="Carregando usuários..." />
               ) : users.length === 0 ? (
-                <div style={empty}>Nenhum usuário encontrado.</div>
+                <div className="text-center py-16 text-slate-400 text-sm">
+                  Nenhum usuário encontrado.
+                </div>
               ) : (
-                <div style={tableWrap}>
-                  <table style={table}>
-                    <thead>
-                      <tr>
-                        <th style={th}>Nome</th>
-                        <th style={th}>E-mail</th>
-                        <th style={th}>Papel</th>
-                        <th style={th}>Loja</th>
-                        <th style={th}>Eventos</th>
-                        <th style={th}>Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {users.map((u, i) => {
-                        const isAdminUser = u.roles?.includes("admin");
-                        const rolesLabel =
-                          Array.isArray(u.roles) && u.roles.length > 0
+                <>
+                  {/* ── Cards (mobile) ── */}
+                  <div className="md:hidden divide-y divide-slate-100">
+                    {users.map((u) => {
+                      const isAdminUser = u.roles?.includes("admin");
+                      const rolesLabel = Array.isArray(u.roles) && u.roles.length > 0
+                        ? u.roles.join(", ")
+                        : "sem papel";
+                      const busy = busyUid === u.uid;
+
+                      return (
+                        <div key={u.uid} className="p-4 flex flex-col gap-3">
+                          {/* Identidade */}
+                          <div>
+                            <p className="font-bold text-slate-900 text-base">{u.displayName || "Sem nome"}</p>
+                            <p className="text-sm text-slate-500 break-all">{u.email || "—"}</p>
+                            <span className={`inline-block mt-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                              isAdminUser
+                                ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                                : "bg-slate-100 border-slate-200 text-slate-500"
+                            }`}>
+                              {rolesLabel}
+                            </span>
+                          </div>
+
+                          {/* Permissões */}
+                          <div className="flex gap-3 flex-wrap">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-slate-600 font-medium">Loja:</span>
+                              <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                                u.canEditStore
+                                  ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                                  : "bg-slate-100 border-slate-200 text-slate-500"
+                              }`}>
+                                {u.canEditStore ? "Sim" : "Não"}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-slate-600 font-medium">Eventos:</span>
+                              <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                                u.canEditEvents
+                                  ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                                  : "bg-slate-100 border-slate-200 text-slate-500"
+                              }`}>
+                                {u.canEditEvents ? "Sim" : "Não"}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Ações */}
+                          {isAdminUser ? (
+                            <p className="text-xs text-slate-400 italic">Admin principal — sem alterações</p>
+                          ) : (
+                            <div className="flex flex-col gap-2">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => toggleStorePermission(u, auth.currentUser)}
+                                className={`w-full py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-60 ${
+                                  u.canEditStore
+                                    ? "bg-orange-100 text-orange-700 hover:bg-orange-200 active:bg-orange-300"
+                                    : "bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800"
+                                }`}
+                              >
+                                {busy ? "Aguarde..." : u.canEditStore ? "Revogar acesso à Loja" : "Permitir editar Loja"}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => toggleEventsPermission(u, auth.currentUser)}
+                                className={`w-full py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-60 ${
+                                  u.canEditEvents
+                                    ? "bg-orange-100 text-orange-700 hover:bg-orange-200 active:bg-orange-300"
+                                    : "bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800"
+                                }`}
+                              >
+                                {busy ? "Aguarde..." : u.canEditEvents ? "Revogar acesso a Eventos" : "Permitir editar Eventos"}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* ── Tabela (desktop) ── */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full" style={{ borderCollapse: "separate", borderSpacing: 0 }}>
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-100">
+                          <th className="text-left py-3 px-4 text-sm font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">Nome</th>
+                          <th className="text-left py-3 px-4 text-sm font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">E-mail</th>
+                          <th className="text-left py-3 px-4 text-sm font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">Papel</th>
+                          <th className="text-left py-3 px-4 text-sm font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">Loja</th>
+                          <th className="text-left py-3 px-4 text-sm font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">Eventos</th>
+                          <th className="text-left py-3 px-4 text-sm font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {users.map((u, i) => {
+                          const isAdminUser = u.roles?.includes("admin");
+                          const rolesLabel = Array.isArray(u.roles) && u.roles.length > 0
                             ? u.roles.join(", ")
                             : "—";
+                          const busy = busyUid === u.uid;
 
-                        return (
-                          <tr key={u.uid} style={i % 2 ? rowAlt : undefined}>
-                            <td style={td}>{u.displayName || "—"}</td>
-                            <td style={td}>{u.email || "—"}</td>
-
-                            <td style={td}>
-                              {rolesLabel === "—" ? (
-                                <span style={pillMuted}>sem papel</span>
-                              ) : (
-                                <span style={isAdminUser ? pill : pillMuted}>
+                          return (
+                            <tr key={u.uid} className={i % 2 ? "bg-slate-50/50" : ""}>
+                              <td className="py-3 px-4 text-sm text-slate-800 font-medium whitespace-nowrap">
+                                {u.displayName || "—"}
+                              </td>
+                              <td className="py-3 px-4 text-sm text-slate-600">
+                                {u.email || "—"}
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                                  isAdminUser
+                                    ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                                    : "bg-slate-100 border-slate-200 text-slate-500"
+                                }`}>
                                   {rolesLabel}
                                 </span>
-                              )}
-                            </td>
-
-                            <td style={td}>
-                              {u.canEditStore ? (
-                                <span style={pill}>Sim</span>
-                              ) : (
-                                <span style={pillMuted}>Não</span>
-                              )}
-                            </td>
-
-                            <td style={td}>
-                              {u.canEditEvents ? (
-                                <span style={pill}>Sim</span>
-                              ) : (
-                                <span style={pillMuted}>Não</span>
-                              )}
-                            </td>
-
-                            <td style={td}>
-                              {isAdminUser ? (
-                                <span
-                                  style={{ fontSize: 12, color: "#9ca3af" }}
-                                >
-                                  (Admin principal)
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                                  u.canEditStore
+                                    ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                                    : "bg-slate-100 border-slate-200 text-slate-500"
+                                }`}>
+                                  {u.canEditStore ? "Sim" : "Não"}
                                 </span>
-                              ) : (
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    gap: 6,
-                                    flexWrap: "wrap",
-                                  }}
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      toggleStorePermission(u, auth.currentUser)
-                                    }
-                                    disabled={busyUid === u.uid}
-                                    style={u.canEditStore ? btnRevoke : btnGrant}
-                                  >
-                                    {busyUid === u.uid
-                                      ? "..."
-                                      : u.canEditStore
-                                      ? "Revogar edição da loja"
-                                      : "Permitir edição da loja"}
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      toggleEventsPermission(
-                                        u,
-                                        auth.currentUser
-                                      )
-                                    }
-                                    disabled={busyUid === u.uid}
-                                    style={
-                                      u.canEditEvents ? btnRevoke : btnGrant
-                                    }
-                                  >
-                                    {busyUid === u.uid
-                                      ? "..."
-                                      : u.canEditEvents
-                                      ? "Revogar editar eventos"
-                                      : "Permitir editar eventos"}
-                                  </button>
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                                  u.canEditEvents
+                                    ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                                    : "bg-slate-100 border-slate-200 text-slate-500"
+                                }`}>
+                                  {u.canEditEvents ? "Sim" : "Não"}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4">
+                                {isAdminUser ? (
+                                  <span className="text-xs text-slate-400 italic">Admin principal</span>
+                                ) : (
+                                  <div className="flex gap-2 flex-wrap">
+                                    <button
+                                      type="button"
+                                      disabled={busy}
+                                      onClick={() => toggleStorePermission(u, auth.currentUser)}
+                                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-60 whitespace-nowrap ${
+                                        u.canEditStore
+                                          ? "bg-orange-100 text-orange-700 hover:bg-orange-200"
+                                          : "bg-emerald-600 text-white hover:bg-emerald-700"
+                                      }`}
+                                    >
+                                      {busy ? "..." : u.canEditStore ? "Revogar Loja" : "Permitir Loja"}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={busy}
+                                      onClick={() => toggleEventsPermission(u, auth.currentUser)}
+                                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-60 whitespace-nowrap ${
+                                        u.canEditEvents
+                                          ? "bg-orange-100 text-orange-700 hover:bg-orange-200"
+                                          : "bg-blue-600 text-white hover:bg-blue-700"
+                                      }`}
+                                    >
+                                      {busy ? "..." : u.canEditEvents ? "Revogar Eventos" : "Permitir Eventos"}
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
-          </div>
-        </section>
-      </main>
+          </main>
+        </div>
+      </div>
     </>
   );
 }

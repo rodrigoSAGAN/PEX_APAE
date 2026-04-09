@@ -19,6 +19,7 @@ import { getIdTokenOrNull } from "../../lib/authToken";
 import { auth } from "../../lib/firebase";
 import { useModal } from "../../components/ModalContext";
 import { compressImage } from "../../lib/compressImage";
+import { cloudinaryUrl, cloudinarySrcSet } from "../../lib/cloudinaryUrl";
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -771,7 +772,9 @@ export default function ProductsPage() {
                     >
                       <div className="relative w-full pt-[75%] bg-slate-50 overflow-hidden">
                         <img
-                          src={p.imageUrl || "/images/imagem-erro.webp"}
+                          src={cloudinaryUrl(p.imageUrl, { width: 480 }) || "/images/imagem-erro.webp"}
+                          srcSet={cloudinarySrcSet(p.imageUrl)}
+                          sizes="(max-width: 768px) 50vw, 25vw"
                           alt={p.name || p.title || "Produto"}
                           className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                           onError={(e) => {
@@ -782,7 +785,7 @@ export default function ProductsPage() {
 
                         <div className="absolute top-3 right-3 z-10">
                           <span
-                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm ${p.active === false
+                            className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm ${p.active === false
                               ? "bg-red-100 text-red-700 border border-red-200"
                               : "bg-emerald-100 text-emerald-700 border border-emerald-200"
                               }`}
@@ -836,7 +839,7 @@ export default function ProductsPage() {
                               {p.name || p.title}
                             </h3>
                           </div>
-                          <span className="inline-block px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-wide border border-blue-100">
+                          <span className="inline-block px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 text-xs font-bold uppercase tracking-wide border border-blue-100">
                             {p.category || "Geral"}
                           </span>
                         </div>
@@ -873,7 +876,7 @@ export default function ProductsPage() {
                               {isOutOfStock ? (
                                 <button
                                   disabled
-                                  className="w-full py-2.5 rounded-xl bg-slate-200 text-slate-500 font-bold text-sm cursor-not-allowed"
+                                  className="w-full py-3.5 rounded-xl bg-slate-200 text-slate-500 font-bold text-sm cursor-not-allowed"
                                 >
                                   Esgotado
                                 </button>
@@ -914,7 +917,7 @@ export default function ProductsPage() {
                                           "Sucesso"
                                         );
                                       }}
-                                      className="py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-sm hover:bg-slate-50 hover:border-slate-300 transition-colors"
+                                      className="py-3.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-sm hover:bg-slate-50 hover:border-slate-300 transition-colors"
                                     >
                                       + Carrinho
                                     </button>
@@ -923,7 +926,7 @@ export default function ProductsPage() {
                                   <button
                                     type="button"
                                     onClick={() => addToCart(p)}
-                                    className="py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm shadow-md shadow-emerald-200 hover:bg-emerald-700 hover:shadow-lg hover:-translate-y-0.5 transition-all"
+                                    className="py-3.5 rounded-xl bg-emerald-600 text-white font-bold text-sm shadow-md shadow-emerald-200 hover:bg-emerald-700 hover:shadow-lg hover:-translate-y-0.5 transition-all"
                                   >
                                     Comprar
                                   </button>

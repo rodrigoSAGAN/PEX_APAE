@@ -37,25 +37,21 @@ export default function NavbarUser({ user, handleLogout }) {
     const checkCart = () => {
       try {
         const raw = localStorage.getItem("portal-apae-cart");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed && Object.keys(parsed).length > 0) {
-            setHasCartItems(true);
-            return;
-          }
-        }
-        setHasCartItems(false);
+        const parsed = raw ? JSON.parse(raw) : null;
+        setHasCartItems(!!parsed && Object.keys(parsed).length > 0);
       } catch {
         setHasCartItems(false);
       }
     };
 
     checkCart();
+    // Reage a mudanças de outras abas via evento storage
     window.addEventListener("storage", checkCart);
-    const interval = setInterval(checkCart, 1000);
+    // Reage a mudanças na mesma aba quando o usuário volta para a página
+    window.addEventListener("focus", checkCart);
     return () => {
       window.removeEventListener("storage", checkCart);
-      clearInterval(interval);
+      window.removeEventListener("focus", checkCart);
     };
   }, []);
 
@@ -242,7 +238,9 @@ export default function NavbarUser({ user, handleLogout }) {
         {isMobile && (
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            style={{ background: "none", border: "none", cursor: "pointer" }}
+            aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
+            aria-expanded={menuOpen}
+            style={{ background: "none", border: "none", cursor: "pointer", padding: "8px", minWidth: 48, minHeight: 48, display: "flex", alignItems: "center", justifyContent: "center" }}
           >
             {menuOpen ? icons.close : icons.menu}
           </button>

@@ -26,31 +26,36 @@ router.post("/pagbank", express.json(), async (req, res) => {
   try {
     console.log("[webhook] Recebido do PagBank");
 
-    const { id: chargeId } = req.body || {};
+    const { id: notificationId } = req.body || {};
 
-    if (!chargeId) {
-      console.log("[webhook] Sem chargeId no payload, ignorando.");
+    if (!notificationId) {
+      console.log("[webhook] Sem id no payload, ignorando.");
       return res.status(200).json({ received: true });
     }
 
-    // Verificação: busca o status real da cobrança na API do PagBank.
+    // Verificação: busca o status real do pedido na API /orders do PagBank.
     // Nunca confiamos apenas no payload do webhook.
-    const response = await axios.get(`${PAGBANK_BASE}/charges/${chargeId}`, {
+    // A API /charges foi descontinuada — usamos /orders conforme orientação do PagBank.
+    const response = await axios.get(`${PAGBANK_BASE}/orders/${notificationId}`, {
       headers: { Authorization: `Bearer ${PAGBANK_TOKEN}` },
     });
 
-    const charge = response.data;
-    console.log("[webhook] Status:", charge.status);
-    console.log("[webhook] Reference:", charge.reference_id);
+    const order = response.data;
+    console.log("[webhook] Order status:", order.status);
+    console.log("[webhook] Reference:", order.reference_id);
+
+    // Considera pago se o pedido estiver PAID ou se algum qr_code estiver PAID.
+    const qrPaid = order?.qr_codes?.some((qr) => qr.status === "PAID");
+    const isPaid = order.status === "PAID" || qrPaid;
 
     // Se o pagamento foi confirmado e temos a referência do pedido, atualiza o Firestore.
-    if (charge.status === "PAID" && charge.reference_id) {
-      const orderId = charge.reference_id;
+    if (isPaid && order.reference_id) {
+      const orderId = order.reference_id;
 
       await db.collection("orders").doc(orderId).update({
         status: "paid",
         paidAt: new Date(),
-        paymentId: chargeId,
+        paymentId: notificationId,
         updatedAt: new Date(),
       });
 

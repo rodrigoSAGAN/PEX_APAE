@@ -59,9 +59,24 @@ export default function Nav() {
   }
 
   // Enquanto o Firebase ainda está checando o estado de autenticação,
-  // não renderizamos nada. Isso evita um pisco visual (flash) onde a navbar
-  // de usuário anônimo aparece por uma fração de segundo antes de mudar para a de admin.
-  if (!authReady) return null;
+  // renderizamos um placeholder com a mesma altura da navbar para evitar
+  // layout shift (conteúdo pulando) enquanto o auth carrega.
+  if (!authReady) return (
+    <div
+      style={{
+        position: "fixed",
+        top: 0,
+        width: "100%",
+        height: 80,
+        zIndex: 90,
+        backdropFilter: "blur(18px)",
+        background:
+          "linear-gradient(90deg, rgba(239,68,68,0.40) 0%, rgba(245,158,11,0.42) 18%, rgba(234,179,8,0.44) 32%, rgba(34,197,94,0.44) 48%, rgba(59,130,246,0.44) 66%, rgba(129,140,248,0.44) 82%, rgba(236,72,153,0.44) 100%)",
+        borderBottom: "1px solid rgba(15,23,42,0.12)",
+      }}
+      aria-hidden="true"
+    />
+  );
 
   const roles = Array.isArray(claims?.roles) ? claims.roles : [];
   const isAdmin = roles.includes("admin");

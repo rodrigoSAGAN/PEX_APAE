@@ -5,7 +5,7 @@
 // que abre um modal para selecionar quantidade de adultos/crianças e enviar
 // pro carrinho. Para admins/colaboradores com canEditEvents: formulário de
 // CRUD de eventos (título, data, local, preço adulto/criança, imagem de capa)
-// e botão de "Simular Reserva" que cria um pedido pago direto no banco (teste).
+// e relatório de reservas para admins/colaboradores.
 // =============================================================================
 
 "use client";
@@ -17,6 +17,7 @@ import SideMenu from "../../components/SideMenu";
 import { getIdTokenOrNull } from "../../lib/authToken";
 import { useModal } from "../../components/ModalContext";
 import { compressImage } from "../../lib/compressImage";
+import { cloudinaryUrl, cloudinarySrcSet } from "../../lib/cloudinaryUrl";
 
 export default function EventsPage() {
  const { showModal, showConfirm } = useModal();
@@ -47,11 +48,7 @@ export default function EventsPage() {
  const [childQuantity, setChildQuantity] = useState(0);
  const [reservationName, setReservationName] = useState("");
  
- const [showSimulateModal, setShowSimulateModal] = useState(false);
- const [simulateEventId, setSimulateEventId] = useState("");
- const [simulateAdultQty, setSimulateAdultQty] = useState(0);
- const [simulateChildQty, setSimulateChildQty] = useState(0);
- const [simulateResName, setSimulateResName] = useState("");
+ const [showEditModal, setShowEditModal] = useState(false);
  
  const router = useRouter();
  
@@ -182,6 +179,7 @@ export default function EventsPage() {
      setEditing(null);
      setImageFile(null);
      setImagePreview(null);
+     setShowEditModal(false);
      await load();
    } catch (e) {
      console.error("[events] erro ao salvar evento:", e);
@@ -327,60 +325,6 @@ export default function EventsPage() {
    }
  }
  
- // Cria uma reserva "simulada" com status pago direto no banco — útil para testes
- async function handleSimulateReservation() {
-   if (!simulateEventId) {
-     return showModal("Por favor, selecione um evento.", "Aten\u00e7\u00e3o");
-   }
-   if (simulateAdultQty === 0 && simulateChildQty === 0) {
-     return showModal("Por favor, selecione ao menos uma quantidade.", "Aten\u00e7\u00e3o");
-   }
-   if (!simulateResName.trim()) {
-     return showModal("Por favor, digite o nome do respons\u00e1vel.", "Aten\u00e7\u00e3o");
-   }
- 
-   try {
-     const token = await getIdTokenOrNull();
-     if (!token) {
-       return showModal("Voc\u00ea precisa estar logado como editor de eventos.", "Acesso Negado");
-     }
- 
-     const res = await fetch("/api/events/simulate-reservation", {
-       method: "POST",
-       headers: {
-         "Content-Type": "application/json",
-         Authorization: `Bearer ${token}`,
-       },
-       body: JSON.stringify({
-         eventId: simulateEventId,
-         adultQuantity: simulateAdultQty,
-         childQuantity: simulateChildQty,
-         reservationName: simulateResName.trim()
-       })
-     });
- 
-     if (!res.ok) {
-       const data = await res.json();
-       return showModal(data.error || "Erro ao simular reserva", "Erro");
-     }
- 
-     const data = await res.json();
-     setShowSimulateModal(false);
-     setSimulateEventId("");
-     setSimulateAdultQty(0);
-     setSimulateChildQty(0);
-     setSimulateResName("");
- 
-     showModal(
-       `Reserva simulada criada com sucesso! ID do pedido: ${data.orderId}`,
-       "Sucesso"
-     );
-   } catch (e) {
-     console.error("Erro ao simular reserva:", e);
-     showModal("Erro inesperado ao simular reserva.", "Erro");
-   }
- }
- 
  const [isMobile, setIsMobile] = useState(false);
  useEffect(() => {
    const checkSize = () => setIsMobile(window.innerWidth < 768);
@@ -422,19 +366,10 @@ export default function EventsPage() {
                </svg>
                Relatório de Reservas
              </button>
-             <button
-               onClick={() => setShowSimulateModal(true)}
-               className="inline-flex items-center gap-2 bg-purple-600 border border-purple-700 text-white font-bold px-8 py-3.5 rounded-full shadow-lg hover:shadow-xl hover:bg-purple-700 hover:-translate-y-1 transition-all duration-300 text-base"
-             >
-               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-               </svg>
-               Simular Reserva
-             </button>
            </div>
          )}
  
-         {canEditEvents && (
+         {canEditEvents && !editing && (
            <form onSubmit={handleSave} className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6 mb-10 animate-fade-in">
              <div className="flex items-center gap-2 mb-6 pb-4 border-b border-slate-100">
                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
@@ -449,12 +384,12 @@ export default function EventsPage() {
  
              <div className="grid md:grid-cols-3 gap-6 mb-6">
                <div className="md:col-span-1">
-                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2" htmlFor="title">
+                 <label className="block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2" htmlFor="title">
                    Título do evento
                  </label>
                  <input
                    id="title"
-                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                   className="w-full px-4 py-3 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                    value={form.title}
                    onChange={(e) =>
                      setForm((f) => ({ ...f, title: e.target.value }))
@@ -465,7 +400,7 @@ export default function EventsPage() {
                </div>
  
                <div>
-                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2" htmlFor="date">
+                 <label className="block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2" htmlFor="date">
                    Data
                  </label>
                  <input
@@ -480,12 +415,12 @@ export default function EventsPage() {
                </div>
  
                <div>
-                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2" htmlFor="location">
+                 <label className="block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2" htmlFor="location">
                    Local
                  </label>
                  <input
                    id="location"
-                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                   className="w-full px-4 py-3 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                    value={form.location}
                    onChange={(e) =>
                      setForm((f) => ({ ...f, location: e.target.value }))
@@ -495,12 +430,12 @@ export default function EventsPage() {
                </div>
              </div>
  
-             <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2" htmlFor="description">
+             <label className="block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2" htmlFor="description">
                Descrição
              </label>
              <textarea
                id="description"
-               className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all min-h-[100px] resize-y"
+               className="w-full px-4 py-3 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all min-h-[100px] resize-y"
                value={form.description}
                onChange={(e) =>
                  setForm((f) => ({ ...f, description: e.target.value }))
@@ -521,28 +456,28 @@ export default function EventsPage() {
                {!form.isFree && (
                  <div className="grid grid-cols-2 gap-4 animate-fade-in">
                    <div>
-                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                     <label className="block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">
                        Preço Adulto (R$)
                      </label>
                      <input
                        type="number"
                        min="0"
                        step="0.01"
-                       className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                       className="w-full px-4 py-3 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                        value={form.priceAdult}
                        onChange={(e) => setForm(f => ({ ...f, priceAdult: e.target.value }))}
                        placeholder="0,00"
                      />
                    </div>
                    <div>
-                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                     <label className="block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">
                        Preço Criança (R$)
                      </label>
                      <input
                        type="number"
                        min="0"
                        step="0.01"
-                       className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                       className="w-full px-4 py-3 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                        value={form.priceChild}
                        onChange={(e) => setForm(f => ({ ...f, priceChild: e.target.value }))}
                        placeholder="0,00"
@@ -553,7 +488,7 @@ export default function EventsPage() {
              </div>
  
              <div className="mb-6">
-               <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+               <label className="block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">
                  Imagem de Capa (opcional)
                </label>
                <div className="flex items-start gap-4">
@@ -646,7 +581,9 @@ export default function EventsPage() {
  
                    <div className="relative h-48 w-full overflow-hidden bg-slate-100">
                      <img
-                       src={ev.coverImage || "/images/imagem-erro.webp"}
+                       src={cloudinaryUrl(ev.coverImage, { width: 480 }) || "/images/imagem-erro.webp"}
+                       srcSet={cloudinarySrcSet(ev.coverImage)}
+                       sizes="(max-width: 768px) 100vw, 33vw"
                        alt={ev.title || "Evento"}
                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                        onError={(e) => {
@@ -726,6 +663,7 @@ export default function EventsPage() {
                              });
                              setImagePreview(ev.coverImage || null);
                              setImageFile(null);
+                             setShowEditModal(true);
                            }}
                            className="flex-1 py-2 rounded-lg bg-blue-50 text-blue-600 font-bold text-xs hover:bg-blue-100 transition-colors flex items-center justify-center gap-1">
                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -771,7 +709,9 @@ export default function EventsPage() {
            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-zoom-in">
              <div className="relative h-40 bg-slate-100">
                <img
-                 src={selectedEvent.coverImage || "/images/imagem-erro.webp"}
+                 src={cloudinaryUrl(selectedEvent.coverImage, { width: 480 }) || "/images/imagem-erro.webp"}
+                 srcSet={cloudinarySrcSet(selectedEvent.coverImage)}
+                 sizes="100vw"
                  alt={selectedEvent.title}
                  className="w-full h-full object-cover"
                  onError={(e) => {
@@ -797,7 +737,7 @@ export default function EventsPage() {
                </p>
  
                <div className="mb-4">
-                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                 <label className="block text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">
                    Nome do Responsável pela Reserva
                  </label>
                  <input
@@ -901,101 +841,155 @@ export default function EventsPage() {
          </div>
        )}
  
-       {showSimulateModal && (
-         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-           <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 animate-fade-in">
-             <div className="flex items-center justify-between mb-6">
-               <h3 className="text-2xl font-bold text-purple-900">🧪 Simular Reserva</h3>
+       {showEditModal && editing && (
+         <div
+           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+           onClick={() => { setShowEditModal(false); setEditing(null); }}
+         >
+           <div
+             className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg h-[75vh] sm:h-[70vh] overflow-y-auto p-4 sm:p-5 flex flex-col gap-3"
+             onClick={(e) => e.stopPropagation()}
+           >
+             <div className="flex items-center justify-between">
+               <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                 <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                   </svg>
+                 </div>
+                 Editar Evento
+               </h3>
                <button
-                 onClick={() => {
-                   setShowSimulateModal(false);
-                   setSimulateEventId("");
-                   setSimulateAdultQty(0);
-                   setSimulateChildQty(0);
-                   setSimulateResName("");
-                 }}
-                 className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors flex items-center justify-center"
+                 onClick={() => { setShowEditModal(false); setEditing(null); }}
+                 className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 font-bold transition-colors"
                >
-                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                 </svg>
+                 ×
                </button>
              </div>
- 
-             <div className="space-y-4 mb-6">
-               <div>
-                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                   Selecione o Evento
+
+             <form onSubmit={handleSave} className="flex flex-col gap-2.5">
+               <div className="grid grid-cols-2 gap-2">
+                 <div className="col-span-2 flex flex-col gap-1">
+                   <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Título</label>
+                   <input
+                     className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                     value={form.title}
+                     onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                     required
+                     placeholder="Ex.: Festa Junina Solidária"
+                   />
+                 </div>
+
+                 <div className="flex flex-col gap-1">
+                   <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Data</label>
+                   <input
+                     type="date"
+                     className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-600"
+                     value={form.date}
+                     onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                   />
+                 </div>
+
+                 <div className="flex flex-col gap-1">
+                   <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Local</label>
+                   <input
+                     className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                     value={form.location}
+                     onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+                     placeholder="Ex.: Ginásio Municipal"
+                   />
+                 </div>
+               </div>
+
+               <div className="flex flex-col gap-1">
+                 <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Descrição</label>
+                 <textarea
+                   rows={2}
+                   className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
+                   value={form.description}
+                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                   placeholder="Detalhes sobre o evento..."
+                 />
+               </div>
+
+               <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                 <label className="flex items-center gap-2 cursor-pointer">
+                   <input
+                     type="checkbox"
+                     checked={!!form.isFree}
+                     onChange={(e) => setForm((f) => ({ ...f, isFree: e.target.checked }))}
+                     className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300"
+                   />
+                   <span className="font-bold text-slate-700 text-sm">Evento gratuito</span>
                  </label>
-                 <select
-                   value={simulateEventId}
-                   onChange={(e) => setSimulateEventId(e.target.value)}
-                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all text-slate-700"
+                 {!form.isFree && (
+                   <div className="grid grid-cols-2 gap-2 mt-2">
+                     <div className="flex flex-col gap-1">
+                       <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Adulto (R$)</label>
+                       <input
+                         type="number" min="0" step="0.01"
+                         className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                         value={form.priceAdult}
+                         onChange={(e) => setForm((f) => ({ ...f, priceAdult: e.target.value }))}
+                         placeholder="0,00"
+                       />
+                     </div>
+                     <div className="flex flex-col gap-1">
+                       <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Criança (R$)</label>
+                       <input
+                         type="number" min="0" step="0.01"
+                         className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                         value={form.priceChild}
+                         onChange={(e) => setForm((f) => ({ ...f, priceChild: e.target.value }))}
+                         placeholder="0,00"
+                       />
+                     </div>
+                   </div>
+                 )}
+               </div>
+
+               <div className="flex items-center gap-3">
+                 <div className="flex-1 flex flex-col gap-1">
+                   <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Imagem de capa</label>
+                   <input id="edit-cover-image" type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                   <label
+                     htmlFor="edit-cover-image"
+                     className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 text-slate-600 text-xs font-semibold hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700 transition-colors cursor-pointer select-none"
+                   >
+                     🖼️ Trocar imagem
+                   </label>
+                 </div>
+                 {(imagePreview || form.coverImage) && (
+                   <img
+                     src={imagePreview || form.coverImage}
+                     alt="Preview"
+                     className="w-20 h-14 object-cover rounded-lg border border-slate-200 shrink-0 mt-4"
+                     onError={(e) => { e.target.src = "/images/imagem-erro.webp"; }}
+                   />
+                 )}
+               </div>
+
+               <div className="flex gap-3 pt-2 border-t border-slate-100 mt-1">
+                 <button
+                   type="button"
+                   onClick={() => { setShowEditModal(false); setEditing(null); setImageFile(null); setImagePreview(null); }}
+                   className="flex-1 py-2 rounded-full bg-slate-200 text-slate-700 text-sm font-bold hover:bg-slate-300 transition-all"
                  >
-                   <option value="">-- Escolha um evento --</option>
-                   {events.map((ev) => (
-                     <option key={ev.id} value={ev.id}>
-                       {ev.title}
-                     </option>
-                   ))}
-                 </select>
+                   Cancelar
+                 </button>
+                 <button
+                   type="submit"
+                   className="flex-1 py-2 rounded-full bg-blue-600 text-white text-sm font-bold shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition-all"
+                 >
+                   Salvar
+                 </button>
                </div>
- 
-               <div>
-                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                   Adultos
-                 </label>
-                 <input
-                   type="number"
-                   min="0"
-                   max="10"
-                   value={simulateAdultQty}
-                   onChange={(e) => setSimulateAdultQty(Number(e.target.value))}
-                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all text-slate-700"
-                 />
-               </div>
- 
-               <div>
-                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                   Crianças
-                 </label>
-                 <input
-                   type="number"
-                   min="0"
-                   max="10"
-                   value={simulateChildQty}
-                   onChange={(e) => setSimulateChildQty(Number(e.target.value))}
-                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all text-slate-700"
-                 />
-               </div>
- 
-               <div>
-                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                   Nome do Responsável
-                 </label>
-                 <input
-                   type="text"
-                   value={simulateResName}
-                   onChange={(e) => setSimulateResName(e.target.value)}
-                   placeholder="Ex.: João Silva"
-                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all text-slate-700"
-                 />
-               </div>
-             </div>
- 
-             <button
-               onClick={handleSimulateReservation}
-               className="w-full bg-purple-600 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg hover:bg-purple-700 hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2"
-             >
-               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-               </svg>
-               Criar Reserva Paga (Teste)
-             </button>
+             </form>
            </div>
          </div>
        )}
-     </div >
+
+     </div>
    </>
  );
 }

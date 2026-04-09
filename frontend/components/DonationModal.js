@@ -10,8 +10,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useModal } from "./ModalContext";
 
 export default function DonationModal({ isOpen, onClose, donationValue, donationName }) {
+  const { showModal } = useModal();
   const [step, setStep] = useState("form");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -131,7 +133,7 @@ export default function DonationModal({ isOpen, onClose, donationValue, donation
     const code = pixData?.qr_code || pixData?.copyPaste || pixData?.qrCode || "";
     if (code) {
       navigator.clipboard.writeText(code);
-      alert("Código PIX copiado!");
+      showModal("Código PIX copiado!", "Copiado");
     }
   }
 

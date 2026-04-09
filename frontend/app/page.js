@@ -13,7 +13,7 @@ import Nav from "../components/Nav";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
 import { db } from "../lib/firebase";
-import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import { collection, query, orderBy, getDocs, limit } from "firebase/firestore";
  
 const SLIDES_MAIN = [
  { src: "/images/faxada.webp", title: "APAE – Pinhão", caption: "Vista da fachada da instituição, acolhendo a comunidade de Pinhão." },
@@ -42,14 +42,13 @@ export default function HomePage() {
  const [galleryItems, setGalleryItems] = useState([]);
 
  useEffect(() => {
-   const q = query(collection(db, "gallery"), orderBy("createdAt", "desc"));
-   const unsub = onSnapshot(q, (snap) => {
+   const q = query(collection(db, "gallery"), orderBy("createdAt", "desc"), limit(24));
+   getDocs(q).then((snap) => {
      setGalleryItems(snap.docs.map((doc) => {
        const d = doc.data();
        return { id: doc.id, src: d.imageUrl || "", label: d.title || "", category: d.category || "Outros" };
      }));
-   }, () => {});
-   return () => unsub();
+   }).catch(() => {});
  }, []);
 
  const galleryCategories = useMemo(() => {
@@ -191,26 +190,28 @@ export default function HomePage() {
            </div>
  
            <button
-             className="absolute top-1/2 -translate-y-1/2 left-3 bg-black/40 hover:bg-black/60 text-white w-9 h-9 rounded-full grid place-items-center z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+             aria-label="Slide anterior"
+             className="absolute top-1/2 -translate-y-1/2 left-2 sm:left-3 bg-black/50 hover:bg-black/70 active:bg-black/80 text-white w-12 h-12 rounded-full grid place-items-center z-10 transition-colors text-2xl"
              onClick={scrollPrevMain}
            >
              ‹
            </button>
- 
+
            <button
-             className="absolute top-1/2 -translate-y-1/2 right-3 bg-black/40 hover:bg-black/60 text-white w-9 h-9 rounded-full grid place-items-center z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+             aria-label="Próximo slide"
+             className="absolute top-1/2 -translate-y-1/2 right-2 sm:right-3 bg-black/50 hover:bg-black/70 active:bg-black/80 text-white w-12 h-12 rounded-full grid place-items-center z-10 transition-colors text-2xl"
              onClick={scrollNextMain}
            >
              ›
            </button>
- 
-           <div className="absolute bottom-3 w-full flex justify-center gap-2 z-10">
+
+           <div className="absolute bottom-4 w-full flex justify-center gap-3 z-10">
              {SLIDES_MAIN.map((_, i) => (
                <button
                  key={i}
+                 aria-label={`Ir para slide ${i + 1}`}
                  onClick={() => scrollToMain(i)}
-                 className={`h-2 rounded-full transition-all ${i === selectedIndexMain ? "w-6 bg-emerald-400" : "w-2 bg-white/70"
-                   }`}
+                 className={`h-3 rounded-full transition-all ${i === selectedIndexMain ? "w-8 bg-emerald-400" : "w-3 bg-white/70"}`}
                />
              ))}
            </div>
@@ -293,37 +294,39 @@ export default function HomePage() {
            <div className="flex h-full">
              {SLIDES_HORTA.map((slide, index) => (
                <div key={index} className="relative min-w-full h-full">
-                 <img src={slide.src} alt={slide.title} className="w-full h-full object-cover" />
+                 <img src={slide.src} alt={slide.title} loading="lazy" className="w-full h-full object-cover" />
                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-black/20" />
                  <div className="absolute bottom-4 left-4 text-white">
                    <h3 className="text-xl font-semibold">{slide.title}</h3>
-                   <p className="text-sm opacity-90 max-w-xs">{slide.caption}</p>
+                   <p className="text-sm text-white/95 max-w-xs">{slide.caption}</p>
                  </div>
                </div>
              ))}
            </div>
  
            <button
-             className="absolute top-1/2 -translate-y-1/2 left-3 bg-black/40 hover:bg-black/60 text-white w-8 h-8 rounded-full grid place-items-center z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+             aria-label="Slide anterior"
+             className="absolute top-1/2 -translate-y-1/2 left-2 sm:left-3 bg-black/50 hover:bg-black/70 active:bg-black/80 text-white w-12 h-12 rounded-full grid place-items-center z-10 transition-colors text-2xl"
              onClick={scrollPrevHorta}
            >
              ‹
            </button>
- 
+
            <button
-             className="absolute top-1/2 -translate-y-1/2 right-3 bg-black/40 hover:bg-black/60 text-white w-8 h-8 rounded-full grid place-items-center z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+             aria-label="Próximo slide"
+             className="absolute top-1/2 -translate-y-1/2 right-2 sm:right-3 bg-black/50 hover:bg-black/70 active:bg-black/80 text-white w-12 h-12 rounded-full grid place-items-center z-10 transition-colors text-2xl"
              onClick={scrollNextHorta}
            >
              ›
            </button>
- 
-           <div className="absolute bottom-3 w-full flex justify-center gap-2 z-10">
+
+           <div className="absolute bottom-4 w-full flex justify-center gap-3 z-10">
              {SLIDES_HORTA.map((_, i) => (
                <button
                  key={i}
+                 aria-label={`Ir para slide ${i + 1}`}
                  onClick={() => scrollToHorta(i)}
-                 className={`h-2 rounded-full transition-all ${i === selectedIndexHorta ? "w-6 bg-emerald-400" : "w-2 bg-white/70"
-                   }`}
+                 className={`h-3 rounded-full transition-all ${i === selectedIndexHorta ? "w-8 bg-emerald-400" : "w-3 bg-white/70"}`}
                />
              ))}
            </div>
@@ -363,19 +366,22 @@ export default function HomePage() {
              {filteredImages.map((img) => (
                <div
                  key={img.id}
-                 className="group relative h-64 rounded-2xl overflow-hidden shadow-md cursor-pointer"
+                 className="group relative rounded-2xl overflow-hidden shadow-md cursor-pointer"
                >
-                 <img
-                   src={img.src}
-                   alt={img.label}
-                   loading="lazy"
-                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 bg-slate-200"
-                   onError={(e) => { e.currentTarget.src = "/images/imagem-erro.webp"; e.currentTarget.onerror = null; }}
-                 />
-                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-6">
+                 <div className="h-52 sm:h-60 lg:h-64">
+                   <img
+                     src={img.src}
+                     alt={img.label}
+                     loading="lazy"
+                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 bg-slate-200"
+                     onError={(e) => { e.currentTarget.src = "/images/imagem-erro.webp"; e.currentTarget.onerror = null; }}
+                   />
+                 </div>
+                 {/* Legenda sempre visível — mobile não tem hover */}
+                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent flex items-end p-4">
                    <div>
-                     <span className="text-emerald-300 text-xs font-bold uppercase tracking-wider mb-1 block">{img.category}</span>
-                     <p className="text-white font-semibold text-lg leading-tight">{img.label}</p>
+                     <span className="text-emerald-300 text-xs font-bold uppercase tracking-wider mb-0.5 block">{img.category}</span>
+                     <p className="text-white font-semibold text-base leading-tight">{img.label}</p>
                    </div>
                  </div>
                </div>

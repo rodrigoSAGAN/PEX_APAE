@@ -11,23 +11,28 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../lib/firebase";
 import { useRouter } from "next/navigation";
 import Nav from "../../components/Nav";
 import SideMenu from "../../components/SideMenu";
+import { useModal } from "../../components/ModalContext";
 
 const formatCurrency = (v) =>
   typeof v === "number"
-    ? v.toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-      })
+    ? v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
     : "R$ 0,00";
+
+// Estilos estáticos fora do componente — não são recriados a cada render
+const cardTitle = { fontSize: 14, fontWeight: 600, color: "#0f172a", marginBottom: 4 };
+const cardValue = { fontSize: 22, fontWeight: 800, color: "#15803d" };
+const cardSub = { fontSize: 12, color: "#6b7280", marginTop: 4 };
+const tdDetails = { whiteSpace: "normal", wordBreak: "break-word", maxWidth: "300px", cursor: "pointer" };
 
 export default function RelatoriosPage() {
   const router = useRouter();
+  const { showModal } = useModal();
 
   const [ready, setReady] = useState(false);
   const [claims, setClaims] = useState(null);
@@ -173,7 +178,7 @@ export default function RelatoriosPage() {
   // O PDF inclui: cabeçalho, tabela de itens por pedido e resumo geral no final.
   const handleDownloadPDF = async () => {
     if (!reportData || !Array.isArray(reportData) || reportData.length === 0) {
-      alert("Nenhum dado disponível para gerar o PDF. Gere um relatório primeiro.");
+      await showModal("Nenhum dado disponível para gerar o PDF. Gere um relatório primeiro.", "Atenção");
       return;
     }
 
@@ -278,15 +283,19 @@ export default function RelatoriosPage() {
       doc.save(fileName);
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
-      alert("Erro ao gerar o PDF. Tente novamente.");
+      await showModal("Erro ao gerar o PDF. Tente novamente.", "Erro");
     }
   };
 
-  if (!ready) return null;
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-
-  const page = {
+  const page = useMemo(() => ({
     minHeight: "calc(100svh - 56px)",
     padding: "16px 16px 80px 16px",
     display: "grid",
@@ -295,36 +304,17 @@ export default function RelatoriosPage() {
     maxWidth: 1120,
     margin: "0 auto",
     background: "#e6f3ff",
-  };
+  }), [isMobile]);
 
-  const panel = {
+  const panel = useMemo(() => ({
     border: "1px solid #e2e8f0",
     borderRadius: 16,
     padding: isMobile ? 16 : 32,
     background: "#ffffff",
     boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-  };
+  }), [isMobile]);
 
-  const cardTitle = {
-    fontSize: 14,
-    fontWeight: 600,
-    color: "#0f172a",
-    marginBottom: 4,
-  };
-
-  const cardValue = {
-    fontSize: 22,
-    fontWeight: 800,
-    color: "#15803d",
-  };
-
-  const cardSub = {
-    fontSize: 12,
-    color: "#6b7280",
-    marginTop: 4,
-  };
-
-  const th = {
+  const th = useMemo(() => ({
     background: "#f1f5f9",
     padding: isMobile ? "8px 12px" : "12px 16px",
     textAlign: "left",
@@ -334,23 +324,17 @@ export default function RelatoriosPage() {
     textTransform: "uppercase",
     letterSpacing: "0.05em",
     whiteSpace: "nowrap",
-  };
+  }), [isMobile]);
 
-  const td = {
+  const td = useMemo(() => ({
     padding: isMobile ? "12px" : "16px",
     borderBottom: "1px solid #f1f5f9",
     fontSize: 14,
     color: "#334155",
     whiteSpace: "nowrap",
-  };
+  }), [isMobile]);
 
-  const tdDetails = {
-    ...td,
-    whiteSpace: "normal",
-    wordBreak: "break-word",
-    maxWidth: "300px",
-    cursor: "pointer",
-  };
+  if (!ready) return null;
 
   const toggleLog = (id) => {
     setExpandedLogs((prev) => {
@@ -363,14 +347,9 @@ export default function RelatoriosPage() {
   return (
     <>
       <style jsx global>{`
-        @media (max-width: 767px) {
-          .table-wrapper {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-          }
-          .side-menu-mobile {
-            display: none !important;
-          }
+        .table-wrapper {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
         }
         .log-details-collapsed {
           display: -webkit-box;
@@ -379,21 +358,14 @@ export default function RelatoriosPage() {
           overflow: hidden;
           text-overflow: ellipsis;
         }
-        .log-details-expanded {
-          white-space: normal;
-          word-break: break-word;
-        }
-        .log-details-cell:hover {
-          background-color: #f8fafc;
-        }
+        .log-details-expanded { white-space: normal; word-break: break-word; }
+        .log-details-cell:hover { background-color: #f8fafc; }
       `}</style>
 
       <Nav />
 
       <main style={page}>
-        <div className="side-menu-mobile">
-          <SideMenu claims={claims} />
-        </div>
+        {!isMobile && <SideMenu claims={claims} />}
 
         <section style={panel}>
           <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6 }}>Relatórios de vendas</h1>
